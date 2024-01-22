@@ -122,6 +122,13 @@ def add_args(neuron_type: NeuronType, parser):
         )
 
         parser.add_argument(
+            "--neuron.mongodatabase_name",
+            type = str,
+            help="The name of mongo DB",
+            default="MongodbMinerStorage"
+        )
+
+        parser.add_argument(
             "--neuron.max_database_size_gb_hint",
             type=int,
             help="Hint for the size of the database to target in GBs. Expect additional some additional overhead.",

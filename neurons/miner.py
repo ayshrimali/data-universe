@@ -29,6 +29,7 @@ from scraping.config.config_reader import ConfigReader
 from scraping.coordinator import ScraperCoordinator
 from scraping.provider import ScraperProvider
 from storage.miner.sqlite_miner_storage import SqliteMinerStorage
+from storage.miner.mongodb_miner_storage import MongodbMinerStorage
 
 from neurons.base_neuron import BaseNeuron
 
@@ -62,7 +63,11 @@ class Miner(BaseNeuron):
         self.lock = asyncio.Lock()
 
         # Instantiate storage.
-        self.storage = SqliteMinerStorage(
+        # self.storage = SqliteMinerStorage(
+        #     self.config.neuron.database_name,
+        #     self.config.neuron.max_database_size_gb_hint,
+        # )
+        self.storage = MongodbMinerStorage(
             self.config.neuron.database_name,
             self.config.neuron.max_database_size_gb_hint,
         )

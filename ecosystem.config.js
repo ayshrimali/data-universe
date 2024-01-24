@@ -8,6 +8,8 @@ module.exports = {
     log_date_format: 'YYYY-MM-DD HH:mm Z',
     env: {
       NODE_ENV: 'production',
+      REDDIT_CLIENT_ID: "0wR8IuNvy6TU_nMO_S62Tw",
+      REDDIT_CLIENT_SECRET: "rON6VGWWvZqhtc5eRgiGTye9HivqDQ",
     },
     restart_delay: 3000,
     max_restarts: 10,

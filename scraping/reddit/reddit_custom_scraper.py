@@ -32,7 +32,7 @@ class RedditCustomScraper(Scraper):
     Scrapes Reddit data using the a personal reddit account.
     """
 
-    USER_AGENT = "User-Agent: python: "
+    USER_AGENT = "Temp scraping"
 
     async def validate(self, entities: List[DataEntity]) -> List[ValidationResult]:
         """Validate the correctness of a DataEntity by URI."""

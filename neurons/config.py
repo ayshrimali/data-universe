@@ -114,18 +114,25 @@ def add_args(neuron_type: NeuronType, parser):
         )
 
     elif neuron_type == NeuronType.MINER:
-        parser.add_argument(
-            "--neuron.database_name",
-            type=str,
-            help="The name of the database.",
-            default="SqliteMinerStorage.sqlite",
-        )
+        # parser.add_argument(
+        #     "--neuron.database_name",
+        #     type=str,
+        #     help="The name of the database.",
+        #     default="SqliteMinerStorage.sqlite",
+        # )
 
         parser.add_argument(
-            "--neuron.mongodatabase_name",
+            "--neuron.database_name",
             type = str,
-            help="The name of mongo DB",
-            default="MongodbMinerStorage"
+            help="The name of MongoDB database",
+            default="mongodb_miner_storage"
+        )
+    
+        parser.add_argument(
+            "--neuron.database_connection_str",
+            type = str,
+            help="The url of MongoDB connection",
+            default="mongodb://localhost:27017/"
         )
 
         parser.add_argument(

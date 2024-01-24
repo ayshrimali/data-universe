@@ -27,11 +27,16 @@ class MongodbMinerStorage(MinerStorage):
         self.database_max_content_size_bytes = utils.gb_to_bytes(
             max_database_size_gb_hint
         )
-        self.mongodb_uri = mongodb_uri
-        self.mongodb_database = mongodb_database
+        try:
+            self.mongodb_uri = mongodb_uri
+            self.mongodb_database = mongodb_database
+            print("MOngo: ", self.mongodb_uri, self.mongodb_database)
 
-        self.mongodb_client = pymongo.MongoClient(self.mongodb_uri)
-        self.mongodb_db = self.mongodb_client[self.mongodb_database]
+            self.mongodb_client = pymongo.MongoClient(self.mongodb_uri)
+            self.mongodb_db = self.mongodb_client[self.mongodb_database]
+
+        except Exception as e:
+            print("Error in mongodb creation: ", e)
 
     def store_data_entities(self, data_entities: List[DataEntity]):
         """Stores any number of DataEntities, making space if necessary."""
@@ -64,8 +69,11 @@ class MongodbMinerStorage(MinerStorage):
 
             # Use update_one with upsert=True to perform an upsert operation (replace if exists, insert if not).
             data_entity_collection.update_one(
-                {"uri": data_entity.uri}, {"$set": data_entity_document}, upsert=True
+                {"uri": data_entity.uri},
+                {"$set": data_entity_document},
+                upsert=True,
             )
+
 
     def list_data_entities_in_data_entity_bucket(
         self, data_entity_bucket_id: DataEntityBucketId

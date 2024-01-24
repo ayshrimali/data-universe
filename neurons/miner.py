@@ -32,7 +32,8 @@ from storage.miner.sqlite_miner_storage import SqliteMinerStorage
 from storage.miner.mongodb_miner_storage import MongodbMinerStorage
 
 from neurons.base_neuron import BaseNeuron
-
+from common.data import DataSource, DataEntity
+import datetime as dt
 
 class Miner(BaseNeuron):
     """The Glorious Miner."""
@@ -68,6 +69,7 @@ class Miner(BaseNeuron):
         #     self.config.neuron.max_database_size_gb_hint,
         # )
         self.storage = MongodbMinerStorage(
+            self.config.neuron.database_connection_str,
             self.config.neuron.database_name,
             self.config.neuron.max_database_size_gb_hint,
         )

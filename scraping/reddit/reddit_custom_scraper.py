@@ -32,7 +32,9 @@ class RedditCustomScraper(Scraper):
     Scrapes Reddit data using the a personal reddit account.
     """
 
-    USER_AGENT = "User-Agent: python: "
+    # USER_AGENT = "User-Agent: python: "
+    USER_AGENT = "Temp scraping"
+
 
     async def validate(self, entities: List[DataEntity]) -> List[ValidationResult]:
         """Validate the correctness of a DataEntity by URI."""
@@ -139,6 +141,7 @@ class RedditCustomScraper(Scraper):
 
     async def scrape(self, scrape_config: ScrapeConfig) -> List[DataEntity]:
         """Scrapes a batch of reddit posts/comments according to the scrape config."""
+        print("In reddit scrapper file")
         bt.logging.trace(
             f"Reddit custom scraper peforming scrape with config: {scrape_config}"
         )

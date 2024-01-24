@@ -35,45 +35,83 @@ class MongodbMinerStorage(MinerStorage):
             self.mongodb_client = pymongo.MongoClient(self.mongodb_uri)
             self.mongodb_db = self.mongodb_client[self.mongodb_database]
 
+            """For testing mongodb connection"""
+            # data_entity_collection = self.mongodb_db["DataEntity"]
+            # data_data_entity_document = {
+            #     "uri": "data_entity.uri",
+            #     "datetime": "data_entity.datetime",
+            #     "timeBucketId": "time_bucket_id",
+            #     "source": "data_entity.source",
+            #     "label": "label",
+            #     "content": "data_entity.content",
+            #     "contentSizeBytes": "data_entity.content_size_bytes",
+            # }
+
+            # data_entity_collection.update_one(
+            #     {"uri": "temp_url"}, {"$set": data_data_entity_document}, upsert=True
+            # )
+            """ To ckeck store_data_entities function"""
+            # self.store_data_entities(
+            #     data_entities=[
+            #         {
+            #             "uri": "https://example.com/post/1",
+            #             "datetime": dt.datetime.now(),
+            #             "source": DataSource.REDDIT,
+            #             "label": "label",
+            #             "content": b"This is the content of the post.",
+            #             "content_size_bytes": 1024,
+            #         }
+            #     ]
+            # )
+
         except Exception as e:
             print("Error in mongodb creation: ", e)
 
     def store_data_entities(self, data_entities: List[DataEntity]):
         """Stores any number of DataEntities, making space if necessary."""
-
-        added_content_size = sum(
-            data_entity.content_size_bytes for data_entity in data_entities
-        )
-
-        # If the total size of the store is larger than our maximum configured stored content size, then raise an exception.
-        if added_content_size > self.database_max_content_size_bytes:
-            raise ValueError(
-                f"Content size to store: {added_content_size} exceeds configured max: {self.database_max_content_size_bytes}"
+        try:
+            print(
+                "1.. IN store_data_entities function", data_entities, data_entities[0]
+            )
+            added_content_size = sum(
+                data_entity.content_size_bytes for data_entity in data_entities
+            )
+            print(
+                "2.. IN store_data_entities function",
+                data_entities,
             )
 
-        data_entity_collection = self.mongodb_db["DataEntity"]
+            # If the total size of the store is larger than our maximum configured stored content size, then raise an exception.
+            if added_content_size > self.database_max_content_size_bytes:
+                raise ValueError(
+                    f"Content size to store: {added_content_size} exceeds configured max: {self.database_max_content_size_bytes}"
+                )
 
-        for data_entity in data_entities:
-            label = "NULL" if data_entity.label is None else data_entity.label.value
-            time_bucket_id = TimeBucket.from_datetime(data_entity.datetime).id
+            data_entity_collection = self.mongodb_db["DataEntity"]
 
-            data_entity_document = {
-                "uri": data_entity.uri,
-                "datetime": data_entity.datetime,
-                "timeBucketId": time_bucket_id,
-                "source": data_entity.source,
-                "label": label,
-                "content": data_entity.content,
-                "contentSizeBytes": data_entity.content_size_bytes,
-            }
+            for data_entity in data_entities:
+                label = "NULL" if data_entity.label is None else data_entity.label.value
+                time_bucket_id = TimeBucket.from_datetime(data_entity.datetime).id
 
-            # Use update_one with upsert=True to perform an upsert operation (replace if exists, insert if not).
-            data_entity_collection.update_one(
-                {"uri": data_entity.uri},
-                {"$set": data_entity_document},
-                upsert=True,
-            )
+                data_entity_document = {
+                    "uri": data_entity.uri,
+                    "datetime": data_entity.datetime,
+                    "timeBucketId": time_bucket_id,
+                    "source": data_entity.source,
+                    "label": label,
+                    "content": data_entity.content,
+                    "contentSizeBytes": data_entity.content_size_bytes,
+                }
 
+                # Use update_one with upsert=True to perform an upsert operation (replace if exists, insert if not).
+                data_entity_collection.update_one(
+                    {"uri": data_entity.uri},
+                    {"$set": data_entity_document},
+                    upsert=True,
+                )
+
+        except Exception as e:
+            print("Error in store_data_entities: ", e)
 
     def list_data_entities_in_data_entity_bucket(
         self, data_entity_bucket_id: DataEntityBucketId

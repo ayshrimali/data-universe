@@ -145,6 +145,7 @@ class ScraperCoordinator:
         miner_storage: MinerStorage,
         config: CoordinatorConfig,
     ):
+        print("In coordinator")
         self.provider = scraper_provider
         self.storage = miner_storage
         self.config = config

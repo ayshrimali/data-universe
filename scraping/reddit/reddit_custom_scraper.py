@@ -142,9 +142,9 @@ class RedditCustomScraper(Scraper):
     async def scrape(self, scrape_config: ScrapeConfig) -> List[DataEntity]:
         """Scrapes a batch of reddit posts/comments according to the scrape config."""
         print("In reddit scrapper file")
-        bt.logging.trace(
-            f"Reddit custom scraper peforming scrape with config: {scrape_config}"
-        )
+        # bt.logging.trace(
+        #     f"Reddit custom scraper peforming scrape with config: {scrape_config}"
+        # )
 
         assert (
             not scrape_config.labels or len(scrape_config.labels) <= 1
@@ -155,7 +155,9 @@ class RedditCustomScraper(Scraper):
             normalize_label(scrape_config.labels[0]) if scrape_config.labels else "all"
         )
 
-        bt.logging.trace(f"Running custom Reddit scraper with search: {subreddit_name}")
+        # bt.logging.trace(f"Running custom Reddit scraper with search: {subreddit_name}")
+        print(f"Running custom Reddit scraper with search: {subreddit_name}")
+
 
         # Randomize between fetching submissions and comments to reduce api calls.
         fetch_submissions = bool(random.getrandbits(1))
@@ -201,7 +203,10 @@ class RedditCustomScraper(Scraper):
                         async for comment in comments
                     ]
         except Exception:
-            bt.logging.error(
+            # bt.logging.error(
+            #     f"Failed to scrape reddit using subreddit {subreddit_name}, limit {search_limit}, time {search_time}, sort {search_sort}: {traceback.format_exc()}"
+            # )
+            print(
                 f"Failed to scrape reddit using subreddit {subreddit_name}, limit {search_limit}, time {search_time}, sort {search_sort}: {traceback.format_exc()}"
             )
             # TODO: Raise a specific exception, in case the scheduler wants to have some logic for retries.
@@ -210,9 +215,10 @@ class RedditCustomScraper(Scraper):
         # Return the parsed results, ignoring data that can't be parsed.
         parsed_contents = [content for content in contents if content != None]
 
-        bt.logging.info(
-            f"Completed scrape for subreddit {subreddit_name}. Scraped {len(parsed_contents)} items"
-        )
+        # bt.logging.info(
+        #     f"Completed scrape for subreddit {subreddit_name}. Scraped {len(parsed_contents)} items"
+        # )
+        print(f"Completed scrape for subreddit {subreddit_name}. Scraped {len(parsed_contents)} items")
 
         return [RedditContent.to_data_entity(content) for content in parsed_contents]
 
@@ -243,9 +249,10 @@ class RedditCustomScraper(Scraper):
                 parentId=None,
             )
         except Exception:
-            bt.logging.trace(
-                f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}"
-            )
+            print(f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}")
+            # bt.logging.trace(
+            #     f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}"
+            # )
 
         return content
 
@@ -275,9 +282,10 @@ class RedditCustomScraper(Scraper):
                 parentId=comment.link_id,
             )
         except Exception:
-            bt.logging.trace(
-                f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}"
-            )
+            print(f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}")
+            # bt.logging.trace(
+            #     f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}"
+            # )
 
         return content
 

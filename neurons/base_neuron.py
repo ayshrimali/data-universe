@@ -41,42 +41,42 @@ class BaseNeuron(ABC):
         self.spec_version = spec_version
 
         self.config = copy.deepcopy(config or self.create_config())
-        check_config(self.config)
+        # check_config(self.config)
 
         # Set up logging with the provided configuration and directory.
-        bt.logging(config=self.config, logging_dir=self.config.full_path)
+        # bt.logging(config=self.config, logging_dir=self.config.full_path)
 
         # Log the configuration for reference.
-        bt.logging.info(self.config)
+        # bt.logging.info(self.config)
 
         # Build Bittensor objects
         # These are core Bittensor classes to interact with the network.
-        bt.logging.info("Setting up bittensor objects.")
+        # bt.logging.info("Setting up bittensor objects.")
 
         # The wallet holds the cryptographic key pairs for the miner.
-        self.wallet = bt.wallet(config=self.config)
-        bt.logging.info(f"Wallet: {self.wallet}")
+        # self.wallet = bt.wallet(config=self.config)
+        # bt.logging.info(f"Wallet: {self.wallet}")
 
         # The subtensor is our connection to the Bittensor blockchain.
-        self.subtensor = bt.subtensor(config=self.config)
-        bt.logging.info(f"Subtensor: {self.subtensor}")
+        # self.subtensor = bt.subtensor(config=self.config)
+        # bt.logging.info(f"Subtensor: {self.subtensor}")
 
         # The metagraph holds the state of the network, letting us know about other validators and miners.
-        self.metagraph = self.subtensor.metagraph(self.config.netuid)
-        bt.logging.info(f"Metagraph: {self.metagraph}")
+        # self.metagraph = self.subtensor.metagraph(self.config.netuid)
+        # bt.logging.info(f"Metagraph: {self.metagraph}")
 
         # Each miner gets a unique identity (UID) in the network for differentiation.
         # TODO: Stop doing meaningful work in the constructor to make neurons more testable.
-        if self.wallet.hotkey.ss58_address in self.metagraph.hotkeys:
-            self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
-            bt.logging.info(
-                f"Running neuron on subnet: {self.config.netuid} with uid {self.uid} using network: {self.subtensor.chain_endpoint}"
-            )
-        else:
-            self.uid = 0
-            bt.logging.warning(
-                f"Hotkey {self.wallet.hotkey.ss58_address} not found in metagraph. Assuming this is a test."
-            )
+        # if self.wallet.hotkey.ss58_address in self.metagraph.hotkeys:
+        #     self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
+        #     bt.logging.info(
+        #         f"Running neuron on subnet: {self.config.netuid} with uid {self.uid} using network: {self.subtensor.chain_endpoint}"
+        #     )
+        # else:
+        #     self.uid = 0
+        #     bt.logging.warning(
+        #         f"Hotkey {self.wallet.hotkey.ss58_address} not found in metagraph. Assuming this is a test."
+        #     )
 
         self.step = 0
 
@@ -104,10 +104,10 @@ class BaseNeuron(ABC):
         Returns the configuration for this neuron.
         """
         parser = argparse.ArgumentParser()
-        bt.wallet.add_args(parser)
-        bt.subtensor.add_args(parser)
-        bt.logging.add_args(parser)
-        bt.axon.add_args(parser)
+        # bt.wallet.add_args(parser)
+        # bt.subtensor.add_args(parser)
+        # bt.logging.add_args(parser)
+        # bt.axon.add_args(parser)
         add_args(self.neuron_type(), parser)
 
         return bt.config(parser)

@@ -124,7 +124,14 @@ def add_args(neuron_type: NeuronType, parser):
             "--neuron.database_name",
             type=str,
             help="The name of the database.",
-            default="SqliteMinerStorage.sqlite",
+            default="mongodb_miner_storage",
+        )
+
+        parser.add_argument(
+            "--neuron.database_connection_str",
+            type = str,
+            help="The url of MongoDB connection",
+            default="mongodb://localhost:27017/"
         )
 
         parser.add_argument(
@@ -133,7 +140,7 @@ def add_args(neuron_type: NeuronType, parser):
             help="Hint for the size of the database to target in GBs. Expect additional some additional overhead.",
             # We intentionally choose a large default to avoid Miner's accidentally deleting data when they
             # run with the default value.
-            default=250,
+            default=1,
         )
 
         root_dir = Path(os.path.dirname(__file__)).parent

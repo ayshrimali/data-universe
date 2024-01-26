@@ -32,6 +32,7 @@ from scraping.config.config_reader import ConfigReader
 from scraping.coordinator import ScraperCoordinator
 from scraping.provider import ScraperProvider
 from storage.miner.sqlite_miner_storage import SqliteMinerStorage
+from storage.miner.mongodb_miner_storage import MongodbMinerStorage
 
 from neurons.base_neuron import BaseNeuron
 
@@ -43,20 +44,21 @@ class Miner(BaseNeuron):
         super().__init__(config=config)
 
         # The axon handles request processing, allowing validators to send this miner requests.
-        self.axon = bt.axon(wallet=self.wallet, port=self.config.axon.port)
+        # self.axon = bt.axon(wallet=self.wallet, port=self.config.axon.port)
 
         # Attach determiners which functions are called when servicing a request.
         bt.logging.info("Attaching forward function to miner axon.")
-        self.axon.attach(
-            forward_fn=self.get_index,
-            blacklist_fn=self.get_index_blacklist,
-            priority_fn=self.get_index_priority,
-        ).attach(
-            forward_fn=self.get_data_entity_bucket,
-            blacklist_fn=self.get_data_entity_bucket_blacklist,
-            priority_fn=self.get_data_entity_bucket_priority,
-        )
-        bt.logging.success(f"Axon created: {self.axon}.")
+        # self.axon.attach(
+        #     forward_fn=self.get_index,
+        #     blacklist_fn=self.get_index_blacklist,
+        #     priority_fn=self.get_index_priority,
+        # ).attach(
+        #     forward_fn=self.get_data_entity_bucket,
+        #     blacklist_fn=self.get_data_entity_bucket_blacklist,
+        #     priority_fn=self.get_data_entity_bucket_priority,
+        # )
+        # bt.logging.success(f"Axon created: {self.axon}.")
+        bt.logging.success(f"Axon created.")
 
         # Instantiate runners.
         self.should_exit: bool = False
@@ -65,13 +67,19 @@ class Miner(BaseNeuron):
         self.lock = threading.RLock()
 
         # Instantiate storage.
-        self.storage = SqliteMinerStorage(
+        # self.storage = SqliteMinerStorage(
+        #     self.config.neuron.database_name,
+        #     self.config.neuron.max_database_size_gb_hint,
+        # )
+
+        self.storage = MongodbMinerStorage(
+            self.config.neuron.database_connection_str,
             self.config.neuron.database_name,
             self.config.neuron.max_database_size_gb_hint,
         )
 
         bt.logging.success(
-            f"Successfully connected to miner storage: {self.config.neuron.database_name}."
+            f"Successfully initialised to miner storage: {self.config.neuron.database_name}."
         )
 
         # Configure the ScraperCoordinator
@@ -103,52 +111,52 @@ class Miner(BaseNeuron):
         """
 
         # Check that miner is registered on the network.
-        self.sync()
+        # self.sync()
 
         # Serve passes the axon information to the network + netuid we are hosting on.
         # This will auto-update if the axon port of external ip have changed.
-        bt.logging.info(
-            f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}."
-        )
-        self.axon.serve(netuid=self.config.netuid, subtensor=self.subtensor)
+        # bt.logging.info(
+        #     f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}."
+        # )
+        # self.axon.serve(netuid=self.config.netuid, subtensor=self.subtensor)
 
         # Start  starts the miner's axon, making it active on the network.
-        self.axon.start()
+        # self.axon.start()
 
-        bt.logging.success(f"Miner starting at block: {self.block}.")
+        # bt.logging.success(f"Miner starting at block: {self.block}.")
 
         self.scraping_coordinator.run_in_background_thread()
 
         # This loop maintains the miner's operations until intentionally stopped.
-        last_sync_block = self.block
-        try:
-            while not self.should_exit:
-                while self.block - last_sync_block < self.config.neuron.epoch_length:
-                    # Wait before checking again.
-                    time.sleep(12)
+        # last_sync_block = self.block
+        # try:
+        #     while not self.should_exit:
+        #         while self.block - last_sync_block < self.config.neuron.epoch_length:
+        #             # Wait before checking again.
+        #             time.sleep(12)
 
-                    # Check if we should exit.
-                    if self.should_exit:
-                        break
+        #             # Check if we should exit.
+        #             if self.should_exit:
+        #                 break
 
-                # Sync metagraph and potentially set weights.
-                self.sync()
+        #         # Sync metagraph and potentially set weights.
+        #         self.sync()
 
-                self._log_status(self.step)
+        #         self._log_status(self.step)
 
-                last_sync_block = self.block
-                self.step += 1
+        #         last_sync_block = self.block
+        #         self.step += 1
 
-        # If someone intentionally stops the miner, it'll safely terminate operations.
-        except KeyboardInterrupt:
-            self.axon.stop()
-            self.scraping_coordinator.stop()
-            bt.logging.success("Miner killed by keyboard interrupt.")
-            sys.exit()
+        # # If someone intentionally stops the miner, it'll safely terminate operations.
+        # except KeyboardInterrupt:
+        #     self.axon.stop()
+        #     self.scraping_coordinator.stop()
+        #     bt.logging.success("Miner killed by keyboard interrupt.")
+        #     sys.exit()
 
-        # In case of unforeseen errors, the miner will log the error and continue operations.
-        except Exception as e:
-            bt.logging.error(traceback.format_exc())
+        # # In case of unforeseen errors, the miner will log the error and continue operations.
+        # except Exception as e:
+        #     bt.logging.error(traceback.format_exc())
 
     def run_in_background_thread(self):
         """

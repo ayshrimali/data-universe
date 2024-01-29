@@ -47,7 +47,6 @@ def check_config(config: bt.config):
     )
 
     config.neuron.full_path = os.path.expanduser(full_path)
-    print("config.neuron.full_path: ", config.neuron.full_path)
     if not os.path.exists(config.neuron.full_path):
         os.makedirs(config.neuron.full_path, exist_ok=True)
 
@@ -113,22 +112,21 @@ def add_args(neuron_type: NeuronType, parser):
             help="Set this flag to not attempt to serve an Axon.",
             default=False,
         )
+        parser.add_argument(
+            "--wandb.off",
+            action="store_true",
+            help="Set this flag to disable logging to wandb.",
+            default=False,
+        )
 
     elif neuron_type == NeuronType.MINER:
-        # parser.add_argument(
-        #     "--neuron.database_name",
-        #     type=str,
-        #     help="The name of the database.",
-        #     default="SqliteMinerStorage.sqlite",
-        # )
-
         parser.add_argument(
             "--neuron.database_name",
-            type = str,
-            help="The name of MongoDB database",
-            default="mongodb_miner_storage"
+            type=str,
+            help="The name of the database.",
+            default="mongodb_miner_storage",
         )
-    
+
         parser.add_argument(
             "--neuron.database_connection_str",
             type = str,

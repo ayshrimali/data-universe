@@ -61,6 +61,12 @@ class MinerScorer:
         with self.lock:
             return self.scores.clone()
 
+    def get_credibilities(self) -> torch.Tensor:
+        """Returns the raw credibilities of all miners."""
+        # Return a copy to ensure outside code can't modify the scores.
+        with self.lock:
+            return self.miner_credibility.clone()
+
     def reset(self, uid: int) -> None:
         """Resets the score and credibility of miner 'uid'."""
         with self.lock:
@@ -144,8 +150,8 @@ class MinerScorer:
 
             self._update_score(uid, score)
 
-            bt.logging.trace(
-                f"Evaluated Miner {uid}. Score={self.scores[uid]}. Credibility={self.miner_credibility[uid]}"
+            bt.logging.success(
+                f"Evaluated Miner {uid}. Score={self.scores[uid].item()}. Credibility={self.miner_credibility[uid].item()}."
             )
 
     def _update_credibility(self, uid: int, validation_results: List[ValidationResult]):
@@ -170,9 +176,16 @@ class MinerScorer:
                 for result in validation_results
             ) / float(total_bytes_validated)
 
+        previous_credibility = self.miner_credibility[uid].clone().item()
+
         # Use EMA to update the miner's credibility.
         self.miner_credibility[uid] = (
             self.alpha * credibility + (1 - self.alpha) * self.miner_credibility[uid]
+        )
+
+        bt.logging.trace(
+            f"""Evaluated Miner {uid}. Percent of bytes validated succesfully this attempt={credibility * 100}. 
+                Previous Credibility={previous_credibility}. New Credibility={self.miner_credibility[uid].item()}."""
         )
 
     def _update_score(self, uid: int, reward: float):

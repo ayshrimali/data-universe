@@ -29,12 +29,11 @@ load_dotenv()
 
 class RedditCustomScraper(Scraper):
     """
-    Scrapes Reddit data using the a personal reddit account.
+    Scrapes Reddit data using a personal reddit account.
     """
 
     # USER_AGENT = "User-Agent: python: "
     USER_AGENT = "Temp scraping"
-
 
     async def validate(self, entities: List[DataEntity]) -> List[ValidationResult]:
         """Validate the correctness of a DataEntity by URI."""
@@ -50,7 +49,7 @@ class RedditCustomScraper(Scraper):
                 results.append(
                     ValidationResult(
                         is_valid=False,
-                        reason="Invalid URI",
+                        reason="Invalid URI.",
                         content_size_bytes_validated=entity.content_size_bytes,
                     )
                 )
@@ -62,12 +61,12 @@ class RedditCustomScraper(Scraper):
                 reddit_content_to_verify = RedditContent.from_data_entity(entity)
             except Exception:
                 bt.logging.error(
-                    f"Failed to decode RedditContent from data entity bytes: {traceback.format_exc()}"
+                    f"Failed to decode RedditContent from data entity bytes: {traceback.format_exc()}."
                 )
                 results.append(
                     ValidationResult(
                         is_valid=False,
-                        reason="Failed to decode data entity",
+                        reason="Failed to decode data entity.",
                         content_size_bytes_validated=entity.content_size_bytes,
                     )
                 )
@@ -105,7 +104,7 @@ class RedditCustomScraper(Scraper):
                 )
             except Exception as e:
                 bt.logging.error(
-                    f"Failed to validate entity ({entity.uri})[{entity.content}]: {traceback.format_exc()}"
+                    f"Failed to validate entity ({entity.uri})[{entity.content}]: {traceback.format_exc()}."
                 )
                 # This is an unfortunate situation. We have no way to distinguish a genuine failure from
                 # one caused by malicious input. In my own testing I was able to make the request timeout by
@@ -124,7 +123,7 @@ class RedditCustomScraper(Scraper):
                 results.append(
                     ValidationResult(
                         is_valid=False,
-                        reason="Reddit post/comment not found or is invalid",
+                        reason="Reddit post/comment not found or is invalid.",
                         content_size_bytes_validated=entity.content_size_bytes,
                     )
                 )
@@ -141,10 +140,9 @@ class RedditCustomScraper(Scraper):
 
     async def scrape(self, scrape_config: ScrapeConfig) -> List[DataEntity]:
         """Scrapes a batch of reddit posts/comments according to the scrape config."""
-        print("In reddit scrapper file")
-        # bt.logging.trace(
-        #     f"Reddit custom scraper peforming scrape with config: {scrape_config}"
-        # )
+        bt.logging.trace(
+            f"Reddit custom scraper peforming scrape with config: {scrape_config}."
+        )
 
         assert (
             not scrape_config.labels or len(scrape_config.labels) <= 1
@@ -155,9 +153,9 @@ class RedditCustomScraper(Scraper):
             normalize_label(scrape_config.labels[0]) if scrape_config.labels else "all"
         )
 
-        # bt.logging.trace(f"Running custom Reddit scraper with search: {subreddit_name}")
-        print(f"Running custom Reddit scraper with search: {subreddit_name}")
-
+        bt.logging.trace(
+            f"Running custom Reddit scraper with search: {subreddit_name}."
+        )
 
         # Randomize between fetching submissions and comments to reduce api calls.
         fetch_submissions = bool(random.getrandbits(1))
@@ -203,11 +201,8 @@ class RedditCustomScraper(Scraper):
                         async for comment in comments
                     ]
         except Exception:
-            # bt.logging.error(
-            #     f"Failed to scrape reddit using subreddit {subreddit_name}, limit {search_limit}, time {search_time}, sort {search_sort}: {traceback.format_exc()}"
-            # )
-            print(
-                f"Failed to scrape reddit using subreddit {subreddit_name}, limit {search_limit}, time {search_time}, sort {search_sort}: {traceback.format_exc()}"
+            bt.logging.error(
+                f"Failed to scrape reddit using subreddit {subreddit_name}, limit {search_limit}, time {search_time}, sort {search_sort}: {traceback.format_exc()}."
             )
             # TODO: Raise a specific exception, in case the scheduler wants to have some logic for retries.
             return []
@@ -215,10 +210,9 @@ class RedditCustomScraper(Scraper):
         # Return the parsed results, ignoring data that can't be parsed.
         parsed_contents = [content for content in contents if content != None]
 
-        # bt.logging.info(
-        #     f"Completed scrape for subreddit {subreddit_name}. Scraped {len(parsed_contents)} items"
-        # )
-        print(f"Completed scrape for subreddit {subreddit_name}. Scraped {len(parsed_contents)} items")
+        bt.logging.success(
+            f"Completed scrape for subreddit {subreddit_name}. Scraped {len(parsed_contents)} items."
+        )
 
         return [RedditContent.to_data_entity(content) for content in parsed_contents]
 
@@ -249,10 +243,9 @@ class RedditCustomScraper(Scraper):
                 parentId=None,
             )
         except Exception:
-            print(f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}")
-            # bt.logging.trace(
-            #     f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}"
-            # )
+            bt.logging.trace(
+                f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}."
+            )
 
         return content
 
@@ -279,13 +272,12 @@ class RedditCustomScraper(Scraper):
                 # Post only fields
                 title=None,
                 # Comment only fields
-                parentId=comment.link_id,
+                parentId=comment.parent_id,
             )
         except Exception:
-            print(f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}")
-            # bt.logging.trace(
-            #     f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}"
-            # )
+            bt.logging.trace(
+                f"Failed to decode RedditContent from Reddit Submission: {traceback.format_exc()}."
+            )
 
         return content
 
@@ -324,6 +316,8 @@ async def test_scrape():
 async def test_validate():
     scraper = RedditCustomScraper()
 
+    # This test covers a top level comment, a submission, and a nested comment with both the correct parent id and the submission id in order.
+    # Previous versions of the custom scraper incorrectly got the submission id as the parent id for nested comments.
     true_entities = [
         DataEntity(
             uri="https://www.reddit.com/r/bittensor_/comments/18bf67l/how_do_you_add_tao_to_metamask/kc3vd3n/",
@@ -341,13 +335,29 @@ async def test_validate():
             content=b'{"id": "t3_18bf67l", "url": "https://www.reddit.com/r/bittensor_/comments/18bf67l/how_do_you_add_tao_to_metamask/", "username": "KOOLBREEZE144", "communityName": "r/bittensor_", "body": "Hey all!!\\n\\nHow do we add TAO to MetaMask? Online gives me these network configurations and still doesn\\u2019t work? \\n\\nHow are you all storing TAO? I wanna purchase on MEXC, but holding off until I can store it!  \\ud83d\\ude11 \\n\\nThanks in advance!!!\\n\\n=====\\n\\nhere is a manual way.\\nNetwork Name\\nTao Network\\n\\nRPC URL\\nhttp://rpc.testnet.tao.network\\n\\nChain ID\\n558\\n\\nCurrency Symbol\\nTAO", "createdAt": "2023-12-05T15:59:13+00:00", "dataType": "post", "title": "How do you add TAO to MetaMask?", "parentId": null}',
             content_size_bytes=775,
         ),
+        DataEntity(
+            uri="https://www.reddit.com/r/bittensor_/comments/18bf67l/how_do_you_add_tao_to_metamask/kc3w8lk/",
+            datetime=dt.datetime(2023, 12, 5, 16, 35, 16, tzinfo=dt.timezone.utc),
+            source=DataSource.REDDIT,
+            label=DataLabel(value="r/bittensor_"),
+            content=b'{"id": "t1_kc3w8lk", "url": "https://www.reddit.com/r/bittensor_/comments/18bf67l/how_do_you_add_tao_to_metamask/kc3w8lk/", "username": "KOOLBREEZE144", "communityName": "r/bittensor_", "body": "Thanks for responding. Do you recommend a wallet or YT video on setting this up? What do you use?", "createdAt": "2023-12-05T16:35:16+00:00", "dataType": "comment", "parentId": "t1_kc3vd3n"}',
+            content_size_bytes=392,
+        ),
+        DataEntity(
+            uri="https://www.reddit.com/r/bittensor_/comments/18bf67l/how_do_you_add_tao_to_metamask/kc3w8lk/",
+            datetime=dt.datetime(2023, 12, 5, 16, 35, 16, tzinfo=dt.timezone.utc),
+            source=DataSource.REDDIT,
+            label=DataLabel(value="r/bittensor_"),
+            content=b'{"id": "t1_kc3w8lk", "url": "https://www.reddit.com/r/bittensor_/comments/18bf67l/how_do_you_add_tao_to_metamask/kc3w8lk/", "username": "KOOLBREEZE144", "communityName": "r/bittensor_", "body": "Thanks for responding. Do you recommend a wallet or YT video on setting this up? What do you use?", "createdAt": "2023-12-05T16:35:16+00:00", "dataType": "comment", "parentId": "t3_18bf67l"}',
+            content_size_bytes=392,
+        ),
     ]
-
     results = await scraper.validate(entities=true_entities)
     print(f"Expecting Pass. Validation results: {results}")
 
     # Now modify the entities to make them invalid and check validation fails.
     good_entity = true_entities[1]
+    good_comment_entity = true_entities[2]
     bad_entities = [
         good_entity.copy(
             update={
@@ -363,6 +373,16 @@ async def test_validate():
             update={"datetime": good_entity.datetime + dt.timedelta(seconds=1)}
         ),
         good_entity.copy(update={"label": DataLabel(value="bittensor_")}),
+        good_comment_entity.copy(
+            update={
+                "content": b'{"id": "t1_kc3w8lk", "url": "https://www.reddit.com/r/bittensor_/comments/18bf67l/how_do_you_add_tao_to_metamask/kc3w8lk/", "username": "KOOLBREEZE144", "communityName": "r/bittensor_", "body": "Thanks for responding. Do you recommend a wallet or YT video on setting this up? What do you use?", "createdAt": "2023-12-05T16:35:16+00:00", "dataType": "comment", "parentId": "extra-long-parent-id"}'
+            }
+        ),
+        good_entity.copy(
+            update={
+                "content": b'{"id": "t3_18bf67l", "url": "https://www.reddit.com/r/bittensor_/comments/18bf67l/how_do_you_add_tao_to_metamask/", "username": "KOOLBREEZE144", "communityName": "r/bittensor_", "body": "Hey all!!\\n\\nHow do we add TAO to MetaMask? Online gives me these network configurations and still doesn\\u2019t work? \\n\\nHow are you all storing TAO? I wanna purchase on MEXC, but holding off until I can store it!  \\ud83d\\ude11 \\n\\nThanks in advance!!!\\n\\n=====\\n\\nhere is a manual way.\\nNetwork Name\\nTao Network\\n\\nRPC URL\\nhttp://rpc.testnet.tao.network\\n\\nChain ID\\n558\\n\\nCurrency Symbol\\nTAO", "createdAt": "2023-12-05T15:59:13+00:00", "dataType": "post", "title": "How do you add TAO to MetaMask?", "parentId": "extra-long-parent-id"}'
+            }
+        ),
     ]
 
     for entity in bad_entities:

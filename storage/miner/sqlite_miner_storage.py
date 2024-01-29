@@ -1,6 +1,9 @@
+from collections import defaultdict
 import threading
 from common import constants, utils
 from common.data import (
+    CompressedEntityBucket,
+    CompressedMinerIndex,
     DataEntity,
     DataEntityBucket,
     DataEntityBucketId,
@@ -9,7 +12,7 @@ from common.data import (
     TimeBucket,
 )
 from storage.miner.miner_storage import MinerStorage
-from typing import List
+from typing import Dict, List
 import datetime as dt
 import sqlite3
 import contextlib
@@ -66,8 +69,10 @@ class SqliteMinerStorage(MinerStorage):
                                 contentSizeBytes    INTEGER         NOT NULL
                                 ) WITHOUT ROWID"""
 
-    DATA_ENTITY_TABLE_INDEX = """CREATE INDEX IF NOT EXISTS data_entity_bucket_index
-                                ON DataEntity (timeBucketId, source, label)"""
+    DELETE_OLD_INDEX = """DROP INDEX IF EXISTS data_entity_bucket_index"""
+
+    DATA_ENTITY_TABLE_INDEX = """CREATE INDEX IF NOT EXISTS data_entity_bucket_index2
+                                ON DataEntity (timeBucketId, source, label, contentSizeBytes)"""
 
     def __init__(
         self,
@@ -87,6 +92,9 @@ class SqliteMinerStorage(MinerStorage):
 
             # Create the DataEntity table (if it does not already exist).
             cursor.execute(SqliteMinerStorage.DATA_ENTITY_TABLE_CREATE)
+
+            # Delete the old index (if it exists).
+            cursor.execute(SqliteMinerStorage.DELETE_OLD_INDEX)
 
             # Create the Index (if it does not already exist).
             cursor.execute(SqliteMinerStorage.DATA_ENTITY_TABLE_INDEX)
@@ -228,8 +236,11 @@ class SqliteMinerStorage(MinerStorage):
             )
             return data_entities
 
-    def list_data_entity_buckets(self) -> List[DataEntityBucket]:
-        """Lists all DataEntityBuckets for all the DataEntities that this MinerStorage is currently serving."""
+    def get_compressed_index(
+        self,
+        bucket_count_limit=constants.DATA_ENTITY_BUCKET_COUNT_LIMIT_PER_MINER_INDEX,
+    ) -> CompressedMinerIndex:
+        """Gets the compressed MinedIndex, which is a summary of all of the DataEntities that this MinerStorage is currently serving."""
 
         with contextlib.closing(self._create_connection()) as connection:
             cursor = connection.cursor()
@@ -239,6 +250,85 @@ class SqliteMinerStorage(MinerStorage):
                 - dt.timedelta(constants.DATA_ENTITY_BUCKET_AGE_LIMIT_DAYS)
             ).id
 
+            # Get sum of content_size_bytes for all rows grouped by DataEntityBucket.
+            cursor.execute(
+                """SELECT SUM(contentSizeBytes) AS bucketSize, timeBucketId, source, label FROM DataEntity
+                        WHERE timeBucketId >= ?
+                        GROUP BY timeBucketId, source, label
+                        ORDER BY bucketSize DESC
+                        LIMIT ?
+                        """,
+                [
+                    oldest_time_bucket_id,
+                    bucket_count_limit,
+                ],
+            )
+
+            buckets_by_source_by_label = defaultdict(dict)
+
+            for row in cursor:
+                # Ensure the miner does not attempt to report more than the max DataEntityBucket size.
+                size = (
+                    constants.DATA_ENTITY_BUCKET_SIZE_LIMIT_BYTES
+                    if row["bucketSize"]
+                    >= constants.DATA_ENTITY_BUCKET_SIZE_LIMIT_BYTES
+                    else row["bucketSize"]
+                )
+
+                label = row["label"] if row["label"] != "NULL" else None
+
+                bucket = buckets_by_source_by_label[DataSource(row["source"])].get(
+                    label, CompressedEntityBucket(label=label)
+                )
+                bucket.sizes_bytes.append(size)
+                bucket.time_bucket_ids.append(row["timeBucketId"])
+                buckets_by_source_by_label[DataSource(row["source"])][label] = bucket
+
+            # Convert the buckets_by_source_by_label into a list of lists of CompressedEntityBucket and return
+            return CompressedMinerIndex(
+                sources={
+                    source: list(labels_to_buckets.values())
+                    for source, labels_to_buckets in buckets_by_source_by_label.items()
+                }
+            )
+
+    def clear_content_from_oldest(self, content_bytes_to_clear: int):
+        """Deletes entries starting from the oldest until we have cleared the specified amount of content."""
+
+        bt.logging.debug(f"Database full. Clearing {content_bytes_to_clear} bytes.")
+
+        with contextlib.closing(self._create_connection()) as connection:
+            cursor = connection.cursor()
+
+            # TODO Investigate way to select last X bytes worth of entries in a single query.
+            # Get the contentSizeBytes of each row by timestamp desc.
+            cursor.execute(
+                "SELECT contentSizeBytes, datetime FROM DataEntity ORDER BY datetime ASC"
+            )
+
+            running_bytes = 0
+            earliest_datetime_to_clear = dt.datetime.min
+            # Iterate over rows until we have found bytes to clear or we reach the end and fail.
+            for row in cursor:
+                running_bytes += row["contentSizeBytes"]
+                earliest_datetime_to_clear = row["datetime"]
+                # Once we have enough content to clear then we do so.
+                if running_bytes >= content_bytes_to_clear:
+                    cursor.execute(
+                        "DELETE FROM DataEntity WHERE datetime <= ?",
+                        [earliest_datetime_to_clear],
+                    )
+                    connection.commit()
+
+    def list_data_entity_buckets(self) -> List[DataEntityBucket]:
+        """Lists all DataEntityBuckets for all the DataEntities that this MinerStorage is currently serving."""
+
+        with contextlib.closing(self._create_connection()) as connection:
+            cursor = connection.cursor()
+            oldest_time_bucket_id = TimeBucket.from_datetime(
+                dt.datetime.now()
+                - dt.timedelta(constants.DATA_ENTITY_BUCKET_AGE_LIMIT_DAYS)
+            ).id
             # Get sum of content_size_bytes for all rows grouped by DataEntityBucket.
             cursor.execute(
                 """SELECT SUM(contentSizeBytes) AS bucketSize, timeBucketId, source, label FROM DataEntity
@@ -282,31 +372,3 @@ class SqliteMinerStorage(MinerStorage):
 
             # If we reach the end of the cursor then return all of the data entity buckets.
             return data_entity_buckets
-
-    def clear_content_from_oldest(self, content_bytes_to_clear: int):
-        """Deletes entries starting from the oldest until we have cleared the specified amount of content."""
-
-        bt.logging.debug(f"Database full. Clearing {content_bytes_to_clear} bytes.")
-
-        with contextlib.closing(self._create_connection()) as connection:
-            cursor = connection.cursor()
-
-            # TODO Investigate way to select last X bytes worth of entries in a single query.
-            # Get the contentSizeBytes of each row by timestamp desc.
-            cursor.execute(
-                "SELECT contentSizeBytes, datetime FROM DataEntity ORDER BY datetime ASC"
-            )
-
-            running_bytes = 0
-            earliest_datetime_to_clear = dt.datetime.min
-            # Iterate over rows until we have found bytes to clear or we reach the end and fail.
-            for row in cursor:
-                running_bytes += row["contentSizeBytes"]
-                earliest_datetime_to_clear = row["datetime"]
-                # Once we have enough content to clear then we do so.
-                if running_bytes >= content_bytes_to_clear:
-                    cursor.execute(
-                        "DELETE FROM DataEntity WHERE datetime <= ?",
-                        [earliest_datetime_to_clear],
-                    )
-                    connection.commit()

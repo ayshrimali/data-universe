@@ -7,8 +7,8 @@ from scraping.scraper import Scraper, ScraperId
 from scraping.x.twitter_flash_scraper import TwitterFlashScraper
 
 DEFAULT_FACTORIES = {
-    # ScraperId.REDDIT_LITE: RedditLiteScraper,
-    # ScraperId.X_FLASH: TwitterFlashScraper,
+    ScraperId.REDDIT_LITE: RedditLiteScraper,
+    ScraperId.X_FLASH: TwitterFlashScraper,
     ScraperId.REDDIT_CUSTOM: RedditCustomScraper,
 }
 
@@ -25,5 +25,5 @@ class ScraperProvider:
         """Returns a scraper for the given scraper id."""
 
         assert scraper_id in self.factories, f"Scraper id {scraper_id} not supported."
-        print('In ScraperProvider: ', scraper_id)
+
         return self.factories[scraper_id]()

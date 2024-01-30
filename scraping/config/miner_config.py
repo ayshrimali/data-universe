@@ -1,7 +1,5 @@
 import os
 import random
-from scraping.config.config_reader import ConfigReader
-from scraping.coordinator import CoordinatorConfig
 
 class MinerConfig():
 
@@ -14,7 +12,6 @@ class MinerConfig():
 
     def store_miner_label(self, storage, label):
         miner_data = storage.store_miner_label({"miner_id": self.pod_name, "miner_label": label })
-        print("Miner_data: ", miner_data)
         return miner_data
 
     def get_random_label(self, configs, miner_labels):

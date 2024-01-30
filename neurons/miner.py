@@ -35,7 +35,7 @@ from scraping.provider import ScraperProvider
 from storage.miner.sqlite_miner_storage import SqliteMinerStorage
 from storage.miner.mongodb_miner_storage import MongodbMinerStorage
 import os
-
+import signal
 from neurons.base_neuron import BaseNeuron
 
 
@@ -405,9 +405,22 @@ class Miner(BaseNeuron):
         )
         return priority
 
+    def cleanup_handler(self, signum, frame):
+        print("In cleanup")
+        pod_name = os.environ.get("HOSTNAME")
+        # Update the document with miner_id as pod_name, setting miner_id to null
+        self.storage.remove_miner_id(pod_name)
+        # Exit the script
+        print("Exiting...")
+        exit(0)
 
 # This is the main function, which runs the miner.
 if __name__ == "__main__":
     with Miner() as miner:
-        while True:
-            time.sleep(60)
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print("In exception: ")
+            # Handle keyboard interrupt (Ctrl+C) gracefully
+            miner.cleanup_handler(signal.SIGINT, None)

@@ -22,6 +22,7 @@ import threading
 import time
 import traceback
 import typing
+import random
 import bittensor as bt
 import datetime as dt
 from common import constants, utils
@@ -29,16 +30,26 @@ from common.data import CompressedMinerIndex
 from common.protocol import GetDataEntityBucket, GetMinerIndex
 from neurons.config import NeuronType
 from scraping.config.config_reader import ConfigReader
-from scraping.coordinator import ScraperCoordinator
+from scraping.config.miner_config import MinerConfig
+from scraping.coordinator import CoordinatorConfig, ScraperCoordinator
 from scraping.provider import ScraperProvider
 from storage.miner.sqlite_miner_storage import SqliteMinerStorage
 from storage.miner.mongodb_miner_storage import MongodbMinerStorage
+import os
 
 from neurons.base_neuron import BaseNeuron
 
 
 class Miner(BaseNeuron):
     """The Glorious Miner."""
+
+    def get_random_label(self, config: CoordinatorConfig) -> str:
+        scraper_id = list(config.scraper_configs.keys())[0]  # Assuming only one scraper
+        label_config = config.scraper_configs[scraper_id].labels_to_scrape[0]  # Assuming only one label config
+        labels = [label.value for label in label_config.label_choices]
+        ## Randomly pick a category; if not available, choose all.
+        random_label = random.choice(labels) if labels else "all"
+        return random_label
 
     def __init__(self, config=None):
         super().__init__(config=config)
@@ -82,6 +93,17 @@ class Miner(BaseNeuron):
             f"Successfully initialised to miner storage: {self.config.neuron.database_name}."
         )
 
+        self.miner_config = MinerConfig()
+
+        pod_name = os.environ.get("HOSTNAME")
+        print(f"The name of the pod is: {pod_name}")
+
+        ## Check miner labels from mongodb
+        # self.miner_labels = self.storage.check_labels(pod_name)
+        # print("miner_labels: ", self.miner_labels)
+
+        self.miner_labels = self.miner_config.get_miner_labels(self.storage)
+
         # Configure the ScraperCoordinator
         bt.logging.info(
             f"Loading scraping config from {self.config.neuron.scraping_config_file}."
@@ -89,12 +111,30 @@ class Miner(BaseNeuron):
         scraping_config = ConfigReader.load_config(
             self.config.neuron.scraping_config_file
         )
+            
+        ## Filter scraping_config labels to contain unique labels
+        # scraping_config = ConfigReader.load_config(
+        #     self.config.neuron.scraping_config_file, self.miner_labels
+        # )
         bt.logging.success(f"Loaded scraping config: {scraping_config}.")
+
+        ## Get random label
+        # random_label = self.get_random_label(scraping_config)
+        # print("subreddit_name: ", random_label)
+
+        random_label = self.miner_config.get_random_label(scraping_config, self.miner_labels)
+
+        ## Store miner label into mongodb DB
+        # self.miner_data = self.storage.store_miner_label({"miner_id": pod_name, "miner_label": random_label })
+        # print("Miner_data: ", self.miner_data)
+
+        self.miner_data = self.miner_config.store_miner_label(self.storage, random_label)
 
         self.scraping_coordinator = ScraperCoordinator(
             scraper_provider=ScraperProvider(),
             miner_storage=self.storage,
             config=scraping_config,
+            subreddit_name=random_label,
         )
 
         # Configure per hotkey request limits.

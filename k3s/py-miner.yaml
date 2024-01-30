@@ -17,6 +17,13 @@ spec:
         - name: py-miner
           image: wynd-py-miner:latest
           imagePullPolicy: IfNotPresent
+          env:
+            - name: PYTHONPATH
+              value: $PYTHONPATH:/app
+            - name: REDDIT_CLIENT_ID
+              value: 0wR8IuNvy6TU_nMO_S62Tw
+            - name: REDDIT_CLIENT_SECRET
+              value: rON6VGWWvZqhtc5eRgiGTye9HivqDQ
           resources:
             requests:
               cpu: "250m"

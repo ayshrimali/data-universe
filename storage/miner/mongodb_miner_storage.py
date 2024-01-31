@@ -43,31 +43,6 @@ class MongodbMinerStorage(MinerStorage):
         # Lock to avoid concurrency issues on clearing space when full
         self.clearing_space_lock = threading.Lock()
 
-    def check_labels(self, miner_id):
-        self.miner_labels_db = self.db['MinerLabels']
-        miner_labels = list(self.miner_labels_db.find({'miner_id': miner_id}))
-        if not miner_labels:
-            print("In if to find label with id='None")
-            miner_labels = list(self.miner_labels_db.find({'miner_id': None}))
-            
-        print("Miner lables: ",miner_labels)
-        return miner_labels
-    
-    def store_miner_label(self, miner_data):
-        """Store miner label with miner id"""
-        self.miner_labels_db = self.db['MinerLabels']
-        query = {'miner_label': miner_data["miner_label"]}
-        update_data = {'$set': {'miner_id': miner_data["miner_id"]}}
-        result = self.miner_labels_db.update_one(query, update_data, upsert=True)
-        return result
-
-    def remove_miner_id(self, pod_name):
-        self.miner_labels_db = self.db['MinerLabels']
-        result = self.miner_labels_db.update_one({"miner_id": pod_name}, {"$set": {"miner_id": None}})
-        return result
-
-
-
     def store_data_entities(self, data_entities: List[DataEntity]):
         """Stores any number of DataEntities, making space if necessary."""
 

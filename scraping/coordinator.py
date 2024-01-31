@@ -65,7 +65,7 @@ class CoordinatorConfig(StrictBaseModel):
 
 
 def _choose_scrape_configs(
-    scraper_id: ScraperId, config: CoordinatorConfig, now: dt.datetime, subreddit_name
+    scraper_id: ScraperId, config: CoordinatorConfig, now: dt.datetime
 ) -> List[ScrapeConfig]:
     """For the given scraper, returns a list of scrapes (defined by ScrapeConfig) to be run."""
     assert (
@@ -101,7 +101,6 @@ def _choose_scrape_configs(
                 entity_limit=label_config.max_data_entities,
                 date_range=TimeBucket.to_date_range(chosen_bucket),
                 labels=labels_to_scrape,
-                subreddit_name=subreddit_name
             )
         )
 
@@ -145,12 +144,10 @@ class ScraperCoordinator:
         scraper_provider: ScraperProvider,
         miner_storage: MinerStorage,
         config: CoordinatorConfig,
-        subreddit_name
     ):
         self.provider = scraper_provider
         self.storage = miner_storage
         self.config = config
-        self.subreddit_name = subreddit_name
 
         self.tracker = ScraperCoordinator.Tracker(self.config, dt.datetime.utcnow())
         self.max_workers = 5
@@ -200,14 +197,14 @@ class ScraperCoordinator:
             for scraper_id in scraper_ids_to_scrape_now:
                 scraper = self.provider.get(scraper_id)
 
-                scrape_configs = _choose_scrape_configs(scraper_id, self.config, now, self.subreddit_name)
+                scrape_configs = _choose_scrape_configs(scraper_id, self.config, now)
 
                 for config in scrape_configs:
                     # Use .partial here to make sure the functions arguments are copied/stored
                     # now rather than being lazily evaluated (if a lambda was used).
                     # https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/cell-var-from-loop.html#cell-var-from-loop-w0640
                     bt.logging.trace(f"Adding scrape task for {scraper_id}: {config}.")
-                    self.queue.put_nowait(functools.partial(scraper.scrape, config, self.subreddit_name))
+                    self.queue.put_nowait(functools.partial(scraper.scrape, config))
 
                 self.tracker.on_scrape_scheduled(scraper_id, now)
 

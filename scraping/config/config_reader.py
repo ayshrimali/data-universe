@@ -15,4 +15,4 @@ class ConfigReader:
         print(f"Loading file: {filepath}")
         parsed_file = model.ScrapingConfig.parse_file(path=filepath)
         print(f"Got parsed file: {parsed_file}")
-        return parsed_file.to_coordinator_config()    
+        return parsed_file.to_coordinator_config()

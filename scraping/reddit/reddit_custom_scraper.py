@@ -33,7 +33,7 @@ class RedditCustomScraper(Scraper):
     """
 
     # USER_AGENT = "User-Agent: python: "
-    USER_AGENT = "test scraper"
+    USER_AGENT = "Temp scraping"
 
     async def validate(self, entities: List[DataEntity]) -> List[ValidationResult]:
         """Validate the correctness of a DataEntity by URI."""
@@ -138,7 +138,7 @@ class RedditCustomScraper(Scraper):
 
         return results
 
-    async def scrape(self, scrape_config: ScrapeConfig, subreddit_name) -> List[DataEntity]:
+    async def scrape(self, scrape_config: ScrapeConfig) -> List[DataEntity]:
         """Scrapes a batch of reddit posts/comments according to the scrape config."""
         bt.logging.trace(
             f"Reddit custom scraper peforming scrape with config: {scrape_config}."
@@ -150,10 +150,8 @@ class RedditCustomScraper(Scraper):
 
         # Strip the r/ from the config or use 'all' if no label is provided.
         subreddit_name = (
-            subreddit_name.removeprefix("r/") if subreddit_name != 'all' else subreddit_name
+            normalize_label(scrape_config.labels[0]) if scrape_config.labels else "all"
         )
-
-        print("Started scraping with subreddit: ",subreddit_name)
 
         bt.logging.trace(
             f"Running custom Reddit scraper with search: {subreddit_name}."

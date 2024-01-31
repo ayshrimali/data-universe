@@ -29,6 +29,7 @@ from neurons.config import NeuronType, check_config, add_args
 from common.utils import ttl_get_block
 from neurons import __spec_version__ as spec_version
 
+BYPASS_SUBNET = False
 
 class BaseNeuron(ABC):
     """
@@ -57,26 +58,27 @@ class BaseNeuron(ABC):
         self.wallet = bt.wallet(config=self.config)
         bt.logging.info(f"Wallet: {self.wallet}.")
 
-        # The subtensor is our connection to the Bittensor blockchain.
-        self.subtensor = bt.subtensor(config=self.config)
-        bt.logging.info(f"Subtensor: {self.subtensor}.")
+        if (not BYPASS_SUBNET):
+            # The subtensor is our connection to the Bittensor blockchain.
+            self.subtensor = bt.subtensor(config=self.config)
+            bt.logging.info(f"Subtensor: {self.subtensor}.")
 
-        # The metagraph holds the state of the network, letting us know about other validators and miners.
-        self.metagraph = self.subtensor.metagraph(self.config.netuid)
-        bt.logging.info(f"Metagraph: {self.metagraph}.")
+            # The metagraph holds the state of the network, letting us know about other validators and miners.
+            self.metagraph = self.subtensor.metagraph(self.config.netuid)
+            bt.logging.info(f"Metagraph: {self.metagraph}.")
 
-        # Each miner gets a unique identity (UID) in the network for differentiation.
-        # TODO: Stop doing meaningful work in the constructor to make neurons more testable.
-        if self.wallet.hotkey.ss58_address in self.metagraph.hotkeys:
-            self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
-            bt.logging.info(
-                f"Running neuron on subnet: {self.config.netuid} with uid {self.uid} using network: {self.subtensor.chain_endpoint}."
-            )
-        else:
-            self.uid = 0
-            bt.logging.warning(
-                f"Hotkey {self.wallet.hotkey.ss58_address} not found in metagraph. Assuming this is a test."
-            )
+            # Each miner gets a unique identity (UID) in the network for differentiation.
+            # TODO: Stop doing meaningful work in the constructor to make neurons more testable.
+            if self.wallet.hotkey.ss58_address in self.metagraph.hotkeys:
+                self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
+                bt.logging.info(
+                    f"Running neuron on subnet: {self.config.netuid} with uid {self.uid} using network: {self.subtensor.chain_endpoint}."
+                )
+            else:
+                self.uid = 0
+                bt.logging.warning(
+                    f"Hotkey {self.wallet.hotkey.ss58_address} not found in metagraph. Assuming this is a test."
+                )
 
         self.step = 0
 

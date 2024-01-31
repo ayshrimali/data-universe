@@ -138,7 +138,7 @@ class RedditCustomScraper(Scraper):
 
         return results
 
-    async def scrape(self, scrape_config: ScrapeConfig) -> List[DataEntity]:
+    async def scrape(self, scrape_config: ScrapeConfig, subreddit_name) -> List[DataEntity]:
         """Scrapes a batch of reddit posts/comments according to the scrape config."""
         bt.logging.trace(
             f"Reddit custom scraper peforming scrape with config: {scrape_config}."

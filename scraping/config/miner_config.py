@@ -20,16 +20,16 @@ class MinerConfig():
 
     def get_random_label(self, configs, miner_labels):
 
-        miner_labels_fetched = [label['miner_label'] for label in miner_labels]
-        print(f"miner_labels_fetched {miner_labels_fetched}")
+        miner_labels_list = [label["miner_label"] for label in miner_labels]
+        miner_data_labels = [DataLabel(value=label) for label in miner_labels_list]
 
         scraper_config = configs.scraper_configs.get('Reddit.custom', None)
         if scraper_config:
-            scraper_config.labels_to_scrape[0].label_choices = miner_labels_fetched
+            scraper_config.labels_to_scrape[0].label_choices = miner_data_labels
 
-        scraper_id = list(configs.scraper_configs.keys())[0]
-        label_config = configs.scraper_configs[scraper_id].labels_to_scrape[0]
-        labels = [label for label in label_config.label_choices]
+        # scraper_id = list(configs.scraper_configs.keys())[0]
+        # label_config = configs.scraper_configs[scraper_id].labels_to_scrape[0]
+        labels = [label for label in miner_labels_list]
         
         random_label = random.choice(labels) if labels else "all"
 

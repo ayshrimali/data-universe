@@ -27,7 +27,7 @@ import typing
 import bittensor as bt
 import datetime as dt
 from common import constants, utils
-from common.data import CompressedMinerIndex
+from common.data import CompressedMinerIndex, DataLabel
 from common.protocol import GetDataEntityBucket, GetMinerIndex
 from neurons.config import NeuronType
 from scraping.config.config_reader import ConfigReader
@@ -37,10 +37,9 @@ from scraping.provider import ScraperProvider
 from storage.miner.sqlite_miner_storage import SqliteMinerStorage
 from storage.miner.mongodb_miner_storage import MongodbMinerStorage
 
-
 from neurons.base_neuron import BaseNeuron
 
-BYPASS_BT = True
+BYPASS_BT = False
 
 
 class Miner(BaseNeuron):
@@ -105,6 +104,7 @@ class Miner(BaseNeuron):
 
         ## Get random label
         random_label = self.miner_config.get_random_label(scraping_config, self.miner_labels)
+        random_data_label = DataLabel(value=random_label)
         bt.logging.success(f"Finalised label for scraping config: {random_label}.")
 
         ## Store miner label into mongodb DB
@@ -115,7 +115,7 @@ class Miner(BaseNeuron):
             scraper_provider=ScraperProvider(),
             miner_storage=self.storage,
             config=scraping_config,
-            subreddit_name=random_label,
+            subreddit_name=random_data_label,
         )
 
         # Configure per hotkey request limits.

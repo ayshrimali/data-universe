@@ -114,6 +114,6 @@ class Scraper(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def scrape(self, scrape_config: ScrapeConfig) -> List[DataEntity]:
+    async def scrape(self, scrape_config: ScrapeConfig, subreddit_name) -> List[DataEntity]:
         """Scrapes a batch of data based on the specified ScrapeConfig."""
         pass

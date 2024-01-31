@@ -211,7 +211,6 @@ class MongodbMinerStorage(MinerStorage):
             print("In if to find label with id='None")
             miner_labels = list(self.miner_labels_db.find({'miner_id': None}))
             
-        print("Miner lables: ",miner_labels)
         return miner_labels
     
     def store_miner_label(self, miner_data):

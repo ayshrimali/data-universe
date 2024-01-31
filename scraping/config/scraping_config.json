@@ -6,7 +6,7 @@
             "labels_to_scrape": [
                 {
                     "label_choices": [],
-                    "max_data_entities": 10
+                    "max_data_entities": 100
                 }
             ]
         }

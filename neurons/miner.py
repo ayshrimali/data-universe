@@ -29,11 +29,13 @@ from common.data import CompressedMinerIndex
 from common.protocol import GetDataEntityBucket, GetMinerIndex
 from neurons.config import NeuronType
 from scraping.config.config_reader import ConfigReader
-from scraping.coordinator import ScraperCoordinator
+from scraping.config.miner_config import MinerConfig
+from scraping.coordinator import CoordinatorConfig, ScraperCoordinator
 from scraping.provider import ScraperProvider
 from storage.miner.sqlite_miner_storage import SqliteMinerStorage
 from storage.miner.mongodb_miner_storage import MongodbMinerStorage
-
+import os
+import signal
 from neurons.base_neuron import BaseNeuron
 
 
@@ -44,20 +46,21 @@ class Miner(BaseNeuron):
         super().__init__(config=config)
 
         # The axon handles request processing, allowing validators to send this miner requests.
-        self.axon = bt.axon(wallet=self.wallet, port=self.config.axon.port)
+        # self.axon = bt.axon(wallet=self.wallet, port=self.config.axon.port)
 
         # Attach determiners which functions are called when servicing a request.
         bt.logging.info("Attaching forward function to miner axon.")
-        self.axon.attach(
-            forward_fn=self.get_index,
-            blacklist_fn=self.get_index_blacklist,
-            priority_fn=self.get_index_priority,
-        ).attach(
-            forward_fn=self.get_data_entity_bucket,
-            blacklist_fn=self.get_data_entity_bucket_blacklist,
-            priority_fn=self.get_data_entity_bucket_priority,
-        )
-        bt.logging.success(f"Axon created: {self.axon}.")
+        # self.axon.attach(
+        #     forward_fn=self.get_index,
+        #     blacklist_fn=self.get_index_blacklist,
+        #     priority_fn=self.get_index_priority,
+        # ).attach(
+        #     forward_fn=self.get_data_entity_bucket,
+        #     blacklist_fn=self.get_data_entity_bucket_blacklist,
+        #     priority_fn=self.get_data_entity_bucket_priority,
+        # )
+        # bt.logging.success(f"Axon created: {self.axon}.")
+        bt.logging.success(f"Axon created.")
 
         # Instantiate runners.
         self.should_exit: bool = False
@@ -81,6 +84,11 @@ class Miner(BaseNeuron):
             f"Successfully initialised to miner storage: {self.config.neuron.database_name}."
         )
 
+        self.miner_config = MinerConfig()
+
+        ## Check miner labels from mongodb
+        self.miner_labels = self.miner_config.get_miner_labels(self.storage)
+
         # Configure the ScraperCoordinator
         bt.logging.info(
             f"Loading scraping config from {self.config.neuron.scraping_config_file}."
@@ -88,12 +96,21 @@ class Miner(BaseNeuron):
         scraping_config = ConfigReader.load_config(
             self.config.neuron.scraping_config_file
         )
+            
+        ## Filter scraping_config labels to contain unique labels
         bt.logging.success(f"Loaded scraping config: {scraping_config}.")
+
+        ## Get random label
+        random_label = self.miner_config.get_random_label(scraping_config, self.miner_labels)
+
+        ## Store miner label into mongodb DB
+        self.miner_data = self.miner_config.store_miner_label(self.storage, random_label)
 
         self.scraping_coordinator = ScraperCoordinator(
             scraper_provider=ScraperProvider(),
             miner_storage=self.storage,
             config=scraping_config,
+            subreddit_name=random_label,
         )
 
         # Configure per hotkey request limits.
@@ -110,52 +127,52 @@ class Miner(BaseNeuron):
         """
 
         # Check that miner is registered on the network.
-        self.sync()
+        # self.sync()
 
         # Serve passes the axon information to the network + netuid we are hosting on.
         # This will auto-update if the axon port of external ip have changed.
-        bt.logging.info(
-            f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}."
-        )
-        self.axon.serve(netuid=self.config.netuid, subtensor=self.subtensor)
+        # bt.logging.info(
+        #     f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}."
+        # )
+        # self.axon.serve(netuid=self.config.netuid, subtensor=self.subtensor)
 
         # Start  starts the miner's axon, making it active on the network.
-        self.axon.start()
+        # self.axon.start()
 
-        bt.logging.success(f"Miner starting at block: {self.block}.")
+        # bt.logging.success(f"Miner starting at block: {self.block}.")
 
         self.scraping_coordinator.run_in_background_thread()
 
         # This loop maintains the miner's operations until intentionally stopped.
-        last_sync_block = self.block
-        try:
-            while not self.should_exit:
-                while self.block - last_sync_block < self.config.neuron.epoch_length:
-                    # Wait before checking again.
-                    time.sleep(12)
+        # last_sync_block = self.block
+        # try:
+        #     while not self.should_exit:
+        #         while self.block - last_sync_block < self.config.neuron.epoch_length:
+        #             # Wait before checking again.
+        #             time.sleep(12)
 
-                    # Check if we should exit.
-                    if self.should_exit:
-                        break
+        #             # Check if we should exit.
+        #             if self.should_exit:
+        #                 break
 
-                # Sync metagraph and potentially set weights.
-                self.sync()
+        #         # Sync metagraph and potentially set weights.
+        #         self.sync()
 
-                self._log_status(self.step)
+        #         self._log_status(self.step)
 
-                last_sync_block = self.block
-                self.step += 1
+        #         last_sync_block = self.block
+        #         self.step += 1
 
-        # If someone intentionally stops the miner, it'll safely terminate operations.
-        except KeyboardInterrupt:
-            self.axon.stop()
-            self.scraping_coordinator.stop()
-            bt.logging.success("Miner killed by keyboard interrupt.")
-            sys.exit()
+        # # If someone intentionally stops the miner, it'll safely terminate operations.
+        # except KeyboardInterrupt:
+        #     self.axon.stop()
+        #     self.scraping_coordinator.stop()
+        #     bt.logging.success("Miner killed by keyboard interrupt.")
+        #     sys.exit()
 
-        # In case of unforeseen errors, the miner will log the error and continue operations.
-        except Exception as e:
-            bt.logging.error(traceback.format_exc())
+        # # In case of unforeseen errors, the miner will log the error and continue operations.
+        # except Exception as e:
+        #     bt.logging.error(traceback.format_exc())
 
     def run_in_background_thread(self):
         """
@@ -388,9 +405,22 @@ class Miner(BaseNeuron):
         )
         return priority
 
+    def cleanup_handler(self, signum, frame):
+        print("In cleanup")
+        pod_name = os.environ.get("HOSTNAME")
+        # Update the document with miner_id as pod_name, setting miner_id to null
+        self.storage.remove_miner_id(pod_name)
+        # Exit the script
+        print("Exiting...")
+        exit(0)
 
 # This is the main function, which runs the miner.
 if __name__ == "__main__":
     with Miner() as miner:
-        while True:
-            time.sleep(60)
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print("In exception: ")
+            # Handle keyboard interrupt (Ctrl+C) gracefully
+            miner.cleanup_handler(signal.SIGINT, None)

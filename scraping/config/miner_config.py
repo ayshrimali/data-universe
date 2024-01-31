@@ -21,9 +21,7 @@ class MinerConfig():
 
         scraper_config = configs.scraper_configs.get('Reddit.custom', None)
         if scraper_config:
-            label_choices = scraper_config.labels_to_scrape[0].label_choices
-            filtered_label_choices = [data_label for data_label in label_choices if data_label.value in miner_labels_set]
-            scraper_config.labels_to_scrape[0].label_choices = filtered_label_choices
+            scraper_config.labels_to_scrape[0].label_choices = miner_labels_set
 
         scraper_id = list(configs.scraper_configs.keys())[0]
         label_config = configs.scraper_configs[scraper_id].labels_to_scrape[0]

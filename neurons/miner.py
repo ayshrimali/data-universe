@@ -92,31 +92,38 @@ class Miner(BaseNeuron):
 
         ## Check miner labels from mongodb
         self.miner_labels = self.miner_config.get_miner_labels(self.storage)
+        print('miner_labels', self.miner_labels)
 
-        # Configure the ScraperCoordinator
-        bt.logging.info(
-            f"Loading scraping config from {self.config.neuron.scraping_config_file}."
-        )
-        scraping_config = ConfigReader.load_config(
-            self.config.neuron.scraping_config_file
-        )
-        bt.logging.success(f"Loaded scraping config: {scraping_config}.")
+        if self.miner_labels: 
+            # Configure the ScraperCoordinator
+            bt.logging.info(
+                f"Loading scraping config from {self.config.neuron.scraping_config_file}."
+            )
+            scraping_config = ConfigReader.load_config(
+                self.config.neuron.scraping_config_file
+            )
+            bt.logging.success(f"Loaded scraping config: {scraping_config}.")
 
-        ## Get random label
-        random_label = self.miner_config.get_random_label(scraping_config, self.miner_labels)
-        random_data_label = DataLabel(value=random_label)
-        bt.logging.success(f"Finalised label for scraping config: {random_label}.")
+            ## Get random label
+            random_label = self.miner_config.get_random_label(scraping_config, self.miner_labels)
+            print("random_label", random_label)
 
-        ## Store miner label into mongodb DB
-        self.miner_data = self.miner_config.store_miner_label(self.storage, random_label)
-        bt.logging.success(f"Updated miner id and blocked label for scraping in meta db: {random_label}.")
+            random_data_label = DataLabel(value=random_label)
+            bt.logging.success(f"Finalised label for scraping config: {random_label}.")
 
-        self.scraping_coordinator = ScraperCoordinator(
-            scraper_provider=ScraperProvider(),
-            miner_storage=self.storage,
-            config=scraping_config,
-            subreddit_name=random_data_label,
-        )
+            ## Store miner label into mongodb DB
+            self.miner_data = self.miner_config.store_miner_label(self.storage, random_label)
+            bt.logging.success(f"Updated miner id and blocked label for scraping in meta db: {random_label}.")
+
+            self.scraping_coordinator = ScraperCoordinator(
+                scraper_provider=ScraperProvider(),
+                miner_storage=self.storage,
+                config=scraping_config,
+                subreddit_name=random_data_label,
+            )
+        else:
+            print("Miner label is not available. Process Terminating")
+            exit()
 
         # Configure per hotkey request limits.
         self.request_lock = threading.RLock()

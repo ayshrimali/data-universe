@@ -31,6 +31,6 @@ class MinerConfig():
         # label_config = configs.scraper_configs[scraper_id].labels_to_scrape[0]
         labels = [label for label in miner_labels_list]
         
-        random_label = random.choice(labels) if labels else "all"
+        random_label = random.choice(labels) 
 
         return random_label

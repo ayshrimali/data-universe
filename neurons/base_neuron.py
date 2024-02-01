@@ -29,7 +29,7 @@ from neurons.config import NeuronType, check_config, add_args
 from common.utils import ttl_get_block
 from neurons import __spec_version__ as spec_version
 
-BYPASS_SUBNET = False
+BYPASS_SUBNET = True
 
 class BaseNeuron(ABC):
     """

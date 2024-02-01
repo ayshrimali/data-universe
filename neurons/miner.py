@@ -38,8 +38,11 @@ from storage.miner.sqlite_miner_storage import SqliteMinerStorage
 from storage.miner.mongodb_miner_storage import MongodbMinerStorage
 
 from neurons.base_neuron import BaseNeuron
+from scrapy.crawler import CrawlerProcess
+from scrapy.utils.project import get_project_settings
+from reddit_scraper.spiders import post_crawler
 
-BYPASS_BT = False
+BYPASS_BT = True
 
 
 class Miner(BaseNeuron):
@@ -115,12 +118,16 @@ class Miner(BaseNeuron):
             self.miner_data = self.miner_config.store_miner_label(self.storage, random_label)
             bt.logging.success(f"Updated miner id and blocked label for scraping in meta db: {random_label}.")
 
-            self.scraping_coordinator = ScraperCoordinator(
-                scraper_provider=ScraperProvider(),
-                miner_storage=self.storage,
-                config=scraping_config,
-                subreddit_name=random_data_label,
-            )
+            ## Reddit scraping using scrapy
+            self.run_spider()
+
+            ## Reddit scraping using asyncpraw
+            # self.scraping_coordinator = ScraperCoordinator(
+            #     scraper_provider=ScraperProvider(),
+            #     miner_storage=self.storage,
+            #     config=scraping_config,
+            #     subreddit_name=random_data_label,
+            # )
         else:
             print("Miner label is not available. Process Terminating")
             exit()
@@ -133,6 +140,13 @@ class Miner(BaseNeuron):
     def neuron_type(self) -> NeuronType:
         return NeuronType.MINER
 
+    def run_spider(self):
+        print("In run spider method")
+        setting = get_project_settings()
+        process = CrawlerProcess(setting)     
+        process.crawl(post_crawler.PostCrawlerSpider)
+        process.start()
+    
     def run(self):
         """
         Initiates and manages the main loop for the miner.
@@ -155,7 +169,7 @@ class Miner(BaseNeuron):
 
             bt.logging.success(f"Miner starting at block: {self.block}.")
 
-        self.scraping_coordinator.run_in_background_thread()
+        # self.scraping_coordinator.run_in_background_thread()  
 
         if (not BYPASS_BT):
             # This loop maintains the miner's operations until intentionally stopped.
@@ -218,7 +232,7 @@ class Miner(BaseNeuron):
         Starts the miner's operations in a background thread upon entering the context.
         This method facilitates the use of the miner in a 'with' statement.
         """
-        self.run_in_background_thread()
+        # self.run_in_background_thread()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):

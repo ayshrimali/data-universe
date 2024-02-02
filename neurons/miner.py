@@ -145,12 +145,12 @@ class Miner(BaseNeuron):
     def neuron_type(self) -> NeuronType:
         return NeuronType.MINER
 
-    def run_spider(self):
-        print("In run spider method")
-        setting = get_project_settings()
-        process = CrawlerProcess(setting)     
-        process.crawl(post_crawler.PostCrawlerSpider)
-        process.start()
+    # def run_spider(self):
+    #     print("In run spider method")
+    #     setting = get_project_settings()
+    #     process = CrawlerProcess(setting)     
+    #     process.crawl(post_crawler.PostCrawlerSpider)
+    #     process.start()
     
     def run(self):
         """

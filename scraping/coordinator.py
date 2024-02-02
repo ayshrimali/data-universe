@@ -228,8 +228,9 @@ class ScraperCoordinator:
 
                 # Perform the scrape
                 data_entities = await scrape_fn()
-                print("data_entities", len(data_entities))
+                print("len(data_entities)", len(data_entities))
                 # self.storage.store_data_entities(data_entities)
                 self.queue.task_done()
+                self.stop()
             except Exception as e:
                 bt.logging.error("Worker " + name + ": " + traceback.format_exc())

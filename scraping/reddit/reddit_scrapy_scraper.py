@@ -43,7 +43,7 @@ class RedditScrapyScraper(Scraper):
         crawler.signals.connect(self.spider_closed_callback, signal=signals.spider_closed)
         process.crawlers.add(crawler)
 
-        process.start(stop_after_crawl=False)
+        process.start()
 
         return self.scraped_data
 

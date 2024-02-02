@@ -3,6 +3,7 @@ from typing import Callable, Dict
 from common.data import DataSource
 from scraping.reddit.reddit_lite_scraper import RedditLiteScraper
 from scraping.reddit.reddit_custom_scraper import RedditCustomScraper
+from scraping.reddit.reddit_scrapy_scraper import RedditScrapyScraper
 from scraping.scraper import Scraper, ScraperId
 from scraping.x.twitter_flash_scraper import TwitterFlashScraper
 
@@ -10,6 +11,7 @@ DEFAULT_FACTORIES = {
     ScraperId.REDDIT_LITE: RedditLiteScraper,
     ScraperId.X_FLASH: TwitterFlashScraper,
     ScraperId.REDDIT_CUSTOM: RedditCustomScraper,
+    ScraperId.REDDIT_SCRAPY: RedditScrapyScraper,
 }
 
 

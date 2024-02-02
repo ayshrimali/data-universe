@@ -34,6 +34,7 @@ from scraping.config.config_reader import ConfigReader
 from scraping.config.miner_config import MinerConfig
 from scraping.coordinator import ScraperCoordinator
 from scraping.provider import ScraperProvider
+from scraping.reddit.reddit_scrapy_scraper import RedditScrapyScraper
 from storage.miner.sqlite_miner_storage import SqliteMinerStorage
 from storage.miner.mongodb_miner_storage import MongodbMinerStorage
 
@@ -119,15 +120,19 @@ class Miner(BaseNeuron):
             bt.logging.success(f"Updated miner id and blocked label for scraping in meta db: {random_label}.")
 
             ## Reddit scraping using scrapy
-            self.run_spider()
+            # self.run_spider()
+            self.reddit_scrapy_scraper = RedditScrapyScraper()
+
+            # self.reddit_scrapy_scraper.scrape(random_data_label)
+
 
             ## Reddit scraping using asyncpraw
-            # self.scraping_coordinator = ScraperCoordinator(
-            #     scraper_provider=ScraperProvider(),
-            #     miner_storage=self.storage,
-            #     config=scraping_config,
-            #     subreddit_name=random_data_label,
-            # )
+            self.scraping_coordinator = ScraperCoordinator(
+                scraper_provider=ScraperProvider(),
+                miner_storage=self.storage,
+                config=scraping_config,
+                subreddit_name=random_data_label,
+            )
         else:
             print("Miner label is not available. Process Terminating")
             exit()
@@ -169,7 +174,7 @@ class Miner(BaseNeuron):
 
             bt.logging.success(f"Miner starting at block: {self.block}.")
 
-        # self.scraping_coordinator.run_in_background_thread()  
+        self.scraping_coordinator.run_in_background_thread()  
 
         if (not BYPASS_BT):
             # This loop maintains the miner's operations until intentionally stopped.
@@ -212,7 +217,8 @@ class Miner(BaseNeuron):
             bt.logging.debug("Starting miner in background thread.")
             self.should_exit = False
             self.thread = threading.Thread(target=self.run, daemon=True)
-            self.thread.start()
+            # self.thread.start()
+            self.run()
             self.is_running = True
             bt.logging.debug("Started")
 
@@ -232,7 +238,7 @@ class Miner(BaseNeuron):
         Starts the miner's operations in a background thread upon entering the context.
         This method facilitates the use of the miner in a 'with' statement.
         """
-        # self.run_in_background_thread()
+        self.run_in_background_thread()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):

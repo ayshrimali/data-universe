@@ -151,6 +151,7 @@ class ScraperCoordinator:
         self.storage = miner_storage
         self.config = config
         self.subreddit_name = subreddit_name
+        print("Data_in_coordinator", self.provider, self.storage, self.config,self.subreddit_name)
 
         self.tracker = ScraperCoordinator.Tracker(self.config, dt.datetime.utcnow())
         self.max_workers = 5
@@ -162,11 +163,13 @@ class ScraperCoordinator:
         Runs the Coordinator on a background thread. The coordinator will run until the process dies.
         """
         assert not self.is_running, "ScrapingCoordinator already running"
+        print("run_in_background_thread")
 
         bt.logging.info("Starting ScrapingCoordinator in a background thread.")
 
         self.is_running = True
-        self.thread = threading.Thread(target=self.run, daemon=True).start()
+        self.run()
+        # self.thread = threading.Thread(target=self.run, daemon=True).start()
 
     def run(self):
         """Blocking call to run the Coordinator, indefinitely."""
@@ -177,6 +180,7 @@ class ScraperCoordinator:
         self.is_running = False
 
     async def _start(self):
+        
         workers = []
         for i in range(self.max_workers):
             worker = asyncio.create_task(
@@ -224,7 +228,8 @@ class ScraperCoordinator:
 
                 # Perform the scrape
                 data_entities = await scrape_fn()
-                self.storage.store_data_entities(data_entities)
+                print("data_entities", len(data_entities))
+                # self.storage.store_data_entities(data_entities)
                 self.queue.task_done()
             except Exception as e:
                 bt.logging.error("Worker " + name + ": " + traceback.format_exc())

@@ -15,8 +15,7 @@ class SortType(Enum):
     NEW = "new"
     HOT = "hot"
 
-# https://www.reddit.com/svc/shreddit/community-more-posts/new/?t=DAY&name=BitcoinBeginners&feedLength=50&after=dDNfMTlmYTdicA%3D%3D
-# https://www.reddit.com/svc/shreddit/community-more-posts/new/?t=DAY&name=bittensor&feedLength=50&after=dDNfMTlmYTdicA%3D%3D&rdt=51988
+
 class PostCrawlerSpider(scrapy.Spider):
     name = "post-crawler"
     url_template = "https://www.reddit.com/svc/shreddit/community-more-posts/{sort_type}/"
@@ -26,7 +25,7 @@ class PostCrawlerSpider(scrapy.Spider):
     }
 
     def __init__(self, subreddit="BitcoinBeginners", days=30, *args, **kwargs):
-        super(PostCrawlerSpider, self).__init__(*args, **kwargs)
+        super(PostCrawlerSpider, self).__init__()
         self.subreddit = subreddit
         self.days = int(days)
 
@@ -44,7 +43,6 @@ class PostCrawlerSpider(scrapy.Spider):
         yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})
 
     def parse(self, response):
-        print("in parse", response)
         posts_nodes = response.xpath('//shreddit-post')
         last_post_id = ""
         target_timestamp = datetime.now(timezone.utc) - timedelta(days=self.days)

@@ -59,6 +59,7 @@ class MongodbMinerScrapyStorage(MinerStorage):
                         "username": data_entity["username"],
                         "timestamp": data_entity["timestamp"],
                         "num_comments": data_entity["num_comments"],
+                        "title": data_entity["title"]
                     }
                 )
 

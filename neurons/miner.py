@@ -84,18 +84,18 @@ class Miner(BaseNeuron):
         # )
 
         # Check and add subnet netuid condition. Below is for netuid 13
-        # self.storage = MongodbMinerStorage(
-        #     self.config.neuron.database_connection_str,
-        #     self.config.neuron.database_name,
-        #     self.config.neuron.max_database_size_gb_hint,
-        # )
-
-        # Below is for netuid 3
-        self.storage = MongodbMinerScrapyStorage(
+        self.storage = MongodbMinerStorage(
             self.config.neuron.database_connection_str,
             self.config.neuron.database_name,
             self.config.neuron.max_database_size_gb_hint,
         )
+
+        # Below is for netuid 3
+        # self.storage = MongodbMinerScrapyStorage(
+        #     self.config.neuron.database_connection_str,
+        #     self.config.neuron.database_name,
+        #     self.config.neuron.max_database_size_gb_hint,
+        # )
 
         bt.logging.success(
             f"Successfully initialised to miner storage: {self.config.neuron.database_name}."

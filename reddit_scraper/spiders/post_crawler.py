@@ -60,6 +60,7 @@ class PostCrawlerSpider(scrapy.Spider):
                 "username": post_node.attrib.get("author"),
                 "timestamp": parser.parse(post_node.attrib.get("created-timestamp")),
                 "num_comments": post_node.attrib.get("comment-count"),
+                "title": post_node.attrib.get("post-title"),
             }
 
             # Check if the post's timestamp is within the desired date range

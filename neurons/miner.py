@@ -83,12 +83,14 @@ class Miner(BaseNeuron):
         #     self.config.neuron.max_database_size_gb_hint,
         # )
 
+        # Check and add subnet netuid condition. Below is for netuid 13
         # self.storage = MongodbMinerStorage(
         #     self.config.neuron.database_connection_str,
         #     self.config.neuron.database_name,
         #     self.config.neuron.max_database_size_gb_hint,
         # )
 
+        # Below is for netuid 3
         self.storage = MongodbMinerScrapyStorage(
             self.config.neuron.database_connection_str,
             self.config.neuron.database_name,
@@ -127,9 +129,12 @@ class Miner(BaseNeuron):
             bt.logging.success(f"Updated miner id and blocked label for scraping in meta db: {random_label}.")
 
             ## Reddit scraping using scrapy
+            # add this to co-ordinator
             self.reddit_scrapy_scraper = RedditScrapyScraper()
             reddit_data = self.reddit_scrapy_scraper.scrape(scraping_config, random_data_label)
             print("reddit_data", len(reddit_data))
+            # Use this pydentic model to serialise data to binary before storage
+            # return [RedditContent.to_data_entity(content) for content in parsed_contents]
             self.storage.store_data_entities(reddit_data)
 
 

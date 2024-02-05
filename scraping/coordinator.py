@@ -224,12 +224,13 @@ class ScraperCoordinator:
         while self.is_running:
             try:
                 # Wait for a scraping task to be added to the queue.
+                print("again_going_to_call")
                 scrape_fn = await self.queue.get()
 
                 # Perform the scrape
                 data_entities = await scrape_fn()
                 print("len(data_entities)", len(data_entities))
-                # self.storage.store_data_entities(data_entities)
+                self.storage.store_data_entities(data_entities)
                 self.queue.task_done()
                 self.stop()
             except Exception as e:

@@ -63,7 +63,7 @@ class BaseMongoPipeline:
         logger.info(f"processing {len(items)} items...")
         ops = [ReplaceOne({self.index_field: item[self.index_field]}, item, upsert=True)
                for item in items if item.get(self.index_field)]
-
+       
         if ops:
             result = self.collection.bulk_write(ops, ordered=False)
             logger.info({k: v for k, v in result.bulk_api_result.items()

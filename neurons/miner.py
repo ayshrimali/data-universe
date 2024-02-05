@@ -35,6 +35,7 @@ from scraping.config.miner_config import MinerConfig
 from scraping.coordinator import ScraperCoordinator
 from scraping.provider import ScraperProvider
 from scraping.reddit.reddit_scrapy_scraper import RedditScrapyScraper
+from storage.miner.mongo_miner_scrapy_stoarge import MongodbMinerScrapyStorage
 from storage.miner.sqlite_miner_storage import SqliteMinerStorage
 from storage.miner.mongodb_miner_storage import MongodbMinerStorage
 
@@ -82,7 +83,13 @@ class Miner(BaseNeuron):
         #     self.config.neuron.max_database_size_gb_hint,
         # )
 
-        self.storage = MongodbMinerStorage(
+        # self.storage = MongodbMinerStorage(
+        #     self.config.neuron.database_connection_str,
+        #     self.config.neuron.database_name,
+        #     self.config.neuron.max_database_size_gb_hint,
+        # )
+
+        self.storage = MongodbMinerScrapyStorage(
             self.config.neuron.database_connection_str,
             self.config.neuron.database_name,
             self.config.neuron.max_database_size_gb_hint,
@@ -96,9 +103,9 @@ class Miner(BaseNeuron):
 
         ## Check miner labels from mongodb
         self.miner_labels = self.miner_config.get_miner_labels(self.storage)
-        print('miner_labels', self.miner_labels)
+        print("miner_labels", self.miner_labels)
 
-        if self.miner_labels: 
+        if self.miner_labels:
             # Configure the ScraperCoordinator
             bt.logging.info(
                 f"Loading scraping config from {self.config.neuron.scraping_config_file}."
@@ -120,19 +127,19 @@ class Miner(BaseNeuron):
             bt.logging.success(f"Updated miner id and blocked label for scraping in meta db: {random_label}.")
 
             ## Reddit scraping using scrapy
-            # self.run_spider()
             self.reddit_scrapy_scraper = RedditScrapyScraper()
-
-            # self.reddit_scrapy_scraper.scrape(random_data_label)
+            reddit_data = self.reddit_scrapy_scraper.scrape(scraping_config, random_data_label)
+            print("reddit_data", len(reddit_data))
+            self.storage.store_data_entities(reddit_data)
 
 
             ## Reddit scraping using asyncpraw
-            self.scraping_coordinator = ScraperCoordinator(
-                scraper_provider=ScraperProvider(),
-                miner_storage=self.storage,
-                config=scraping_config,
-                subreddit_name=random_data_label,
-            )
+            # self.scraping_coordinator = ScraperCoordinator(
+            #     scraper_provider=ScraperProvider(),
+            #     miner_storage=self.storage,
+            #     config=scraping_config,
+            #     subreddit_name=random_data_label,
+            # )
         else:
             print("Miner label is not available. Process Terminating")
             exit()
@@ -144,14 +151,6 @@ class Miner(BaseNeuron):
 
     def neuron_type(self) -> NeuronType:
         return NeuronType.MINER
-
-    # def run_spider(self):
-    #     print("In run spider method")
-    #     setting = get_project_settings()
-    #     process = CrawlerProcess(setting)     
-    #     process.crawl(post_crawler.PostCrawlerSpider)
-    #     process.start()
-    
     def run(self):
         """
         Initiates and manages the main loop for the miner.
@@ -163,7 +162,6 @@ class Miner(BaseNeuron):
 
             # Serve passes the axon information to the network + netuid we are hosting on.
             # This will auto-update if the axon port of external ip have changed.
-        
             bt.logging.info(
                 f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}."
             )
@@ -174,7 +172,7 @@ class Miner(BaseNeuron):
 
             bt.logging.success(f"Miner starting at block: {self.block}.")
 
-        self.scraping_coordinator.run_in_background_thread()  
+        # self.scraping_coordinator.run_in_background_thread()  
 
         if (not BYPASS_BT):
             # This loop maintains the miner's operations until intentionally stopped.

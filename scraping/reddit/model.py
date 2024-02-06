@@ -49,7 +49,7 @@ class RedditScrapyContent(BaseModel):
     @classmethod
     def to_data_entity(cls, content: "RedditScrapyContent") -> DataEntity:
         """Converts the RedditContent to a DataEntity."""
-        print("content", content)
+        # print("content", content)
 
         content_bytes = content.json(by_alias=True).encode("utf-8")
         return DataEntity(

@@ -130,21 +130,21 @@ class Miner(BaseNeuron):
 
             ## Reddit scraping using scrapy
             # add this to co-ordinator
-            self.reddit_scrapy_scraper = RedditScrapyScraper()
-            reddit_data = self.reddit_scrapy_scraper.scrape(scraping_config, random_data_label)
-            print("reddit_data", len(reddit_data))
-            # Use this pydentic model to serialise data to binary before storage
-            # return [RedditContent.to_data_entity(content) for content in parsed_contents]
-            self.storage.store_data_entities(reddit_data)
+            # self.reddit_scrapy_scraper = RedditScrapyScraper()
+            # reddit_data = self.reddit_scrapy_scraper.scrape(scraping_config, random_data_label)
+            # print("reddit_data", len(reddit_data))
+            # # Use this pydentic model to serialise data to binary before storage
+            # # return [RedditContent.to_data_entity(content) for content in parsed_contents]
+            # self.storage.store_data_entities(reddit_data)
 
 
             ## Reddit scraping using asyncpraw
-            # self.scraping_coordinator = ScraperCoordinator(
-            #     scraper_provider=ScraperProvider(),
-            #     miner_storage=self.storage,
-            #     config=scraping_config,
-            #     subreddit_name=random_data_label,
-            # )
+            self.scraping_coordinator = ScraperCoordinator(
+                scraper_provider=ScraperProvider(),
+                miner_storage=self.storage,
+                config=scraping_config,
+                subreddit_name=random_data_label,
+            )
         else:
             print("Miner label is not available. Process Terminating")
             exit()
@@ -177,7 +177,7 @@ class Miner(BaseNeuron):
 
             bt.logging.success(f"Miner starting at block: {self.block}.")
 
-        # self.scraping_coordinator.run_in_background_thread()  
+        self.scraping_coordinator.run_in_background_thread()  
 
         if (not BYPASS_BT):
             # This loop maintains the miner's operations until intentionally stopped.

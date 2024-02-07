@@ -1,4 +1,5 @@
 import asyncio
+import random
 import time
 import traceback
 import datetime as dt
@@ -13,7 +14,7 @@ from scrapy.signalmanager import dispatcher
 from twisted.internet import reactor
 from scrapy.utils.log import configure_logging
 from scrapy.utils.project import get_project_settings
-from reddit_scraper.spiders import post_crawler
+from reddit_scraper.spiders import comment_crawler, post_crawler
 from scrapy import cmdline
 from scrapy import signals
 from dotenv import load_dotenv
@@ -53,14 +54,17 @@ class RedditScrapyScraper(Scraper):
 
     #     return process
 
-    def crawler_runner(self, subreddit):
+    def crawler_runner(self, subreddit, fetch_posts):
         self.scraped_data = []
 
         configure_logging()    
         runner = CrawlerRunner()
 
         dispatcher.connect(self.item_callback, signal=signals.item_scraped)
-        d = runner.crawl(post_crawler.PostCrawlerSpider, subreddit=subreddit, days=30)
+        if fetch_posts:
+            d = runner.crawl(post_crawler.PostCrawlerSpider, subreddit=subreddit, days=30)
+        else :
+            d = runner.crawl(comment_crawler.CommentCrawlerSpider, subreddit=subreddit, days=30)
         d.addBoth(lambda _: reactor.stop())
         reactor.run()
         reactor.callFromThread(reactor.stop)
@@ -69,52 +73,67 @@ class RedditScrapyScraper(Scraper):
     async def scrape(self, scrape_config, subreddit):
         # Strip the r/ from the config or use 'all' if no label is provided.
         subreddit_name = normalize_label(subreddit)
-        self.crawler_runner(subreddit_name)
+        fetch_posts = bool(random.getrandbits(1))
+        self.crawler_runner(subreddit_name, fetch_posts)
         
         # print("data: ",len(self.scraped_data))
 
-        parsed_contents = [self._best_effort_parse_data(content, subreddit_name) for content in self.scraped_data ]
+        if fetch_posts :
+            parsed_contents = [self._best_effort_parse_post(content, subreddit_name) for content in self.scraped_data ]
+        else:
+            parsed_contents = [self._best_effort_parse_comment(content, subreddit_name) for content in self.scraped_data ]
+
         print("parsed_contents", len(parsed_contents))
 
         return [RedditScrapyContent.to_data_entity(content) for content in parsed_contents if content is not None]
-   
 
-    def _best_effort_parse_data(self, data, subreddit) -> RedditScrapyContent:
+    def _best_effort_parse_comment(self, comment, subreddit) -> RedditScrapyContent:
         """Performs a best effort parsing of a Reddit data into a RedditScrapyContent
         Any errors are logged and ignored."""
 
         content = None
         try:
             content = RedditScrapyContent(
-                id=data["id"],
-                url="https://www.reddit.com" + normalize_permalink(data["url"]),
-                text= data["text"],
-                likes=data["likes"],
-                datatype=data["datatype"],
-                user_id=data["user_id"] if data["user_id"] else '[deleted]',
-                username=data["username"],
+                id=comment["id"],
+                url="https://www.reddit.com" + normalize_permalink(comment["url"]),
+                text= comment["text"],
+                likes=comment["likes"],
+                username=comment["username"],
                 community=subreddit,
-                created_at=data["timestamp"],
-                title=data["title"],
-                num_comments = data["num_comments"],
+                created_at=comment["timestamp"],
+                type=comment["type"]
             )
-            # print("content_in_best_parse: ", content)
+            # print("content_in_best_parse_comment: ", content)
 
         except Exception as e:
-            print('error_in_parse', e, data)
+            print('error_in_comment_parse', e, comment)
 
         return content
 
-# To test it manually
-if __name__ == '__main__':
-    # reddit_scraper = RedditScrapyScraper()
-    # asyncio.run(reddit_scraper.run())
-    i = 0
-    while i < 2:
 
-        async def test_scrape():
-            reddit_scraper = RedditScrapyScraper()
-            await reddit_scraper.scrape({}, DataLabel(value = "r/BitcoinBeginners"))
-        asyncio.run(test_scrape())
+    def _best_effort_parse_post(self, post, subreddit) -> RedditScrapyContent:
+        """Performs a best effort parsing of a Reddit data into a RedditScrapyContent
+        Any errors are logged and ignored."""
 
-        i += 1
+        content = None
+        try:
+            content = RedditScrapyContent(
+                id=post["id"],
+                url="https://www.reddit.com" + normalize_permalink(post["url"]),
+                text= post["text"],
+                likes=post["likes"],
+                datatype=post["datatype"],
+                user_id=post["user_id"] if post["user_id"] else '[deleted]',
+                username=post["username"],
+                community=subreddit,
+                created_at=post["timestamp"],
+                title=post["title"],
+                type=post["type"],
+                num_comments = post["num_comments"],
+            )
+            # print("content_in_best_parse_post: ", content)
+
+        except Exception as e:
+            print('error_in_post_parse', e, post)
+
+        return content

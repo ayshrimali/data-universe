@@ -30,10 +30,8 @@ class RedditScrapyContent(BaseModel):
         description="Number of post likes",
         default=None
     )
-    datatype :str = Field(
-        description="Type of scraped data its comments or post"
-    )
-    user_id: str
+    datatype : Optional[str] = Field(default=None)
+    user_id: Optional[str]
     username: str
     community: str = Field(
         alias="community", description="The subreddit. Includes the 'r/' prefix", default=None
@@ -44,7 +42,17 @@ class RedditScrapyContent(BaseModel):
     title: Optional[str] = Field(
         description="Title of the post. Empty for comments", default=None
     )
-    num_comments: str
+
+    parent: Optional[str] = Field(
+        description="The ID of the parent comment. Only applicable to comments.",
+        default=None,
+    )
+    type : str = Field(
+        description="Type of scraped data its comments or post"
+    )
+
+    num_comments: Optional[str]
+
 
     @classmethod
     def to_data_entity(cls, content: "RedditScrapyContent") -> DataEntity:

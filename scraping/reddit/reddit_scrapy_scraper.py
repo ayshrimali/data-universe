@@ -18,6 +18,7 @@ from reddit_scraper.spiders import comment_crawler, post_crawler
 from scrapy import cmdline
 from scrapy import signals
 from dotenv import load_dotenv
+from multiprocessing import Process
 
 load_dotenv()
 
@@ -31,8 +32,10 @@ class RedditScrapyScraper(Scraper):
         """Validate the correctness of a DataEntity by URI."""
         pass
 
+
     def item_callback(self, item, response, spider):
         self.scraped_data.append(item)
+        print("data_stored_in_scraped_data: ",len(self.scraped_data))
 
     # def spider_ended(self, reason):
     #     print("Spider closed: ",post_crawler.PostCrawlerSpider.name, reason)
@@ -55,35 +58,44 @@ class RedditScrapyScraper(Scraper):
     #     return process
 
     def crawler_runner(self, subreddit, fetch_posts):
-        self.scraped_data = []
+        try:
+            self.scraped_data = []
+            # configure_logging()
+            # runner = CrawlerRunner()
+            process = CrawlerProcess(get_project_settings())
 
-        configure_logging()    
-        runner = CrawlerRunner()
+            dispatcher.connect(self.item_callback, signal=signals.item_scraped)
 
-        dispatcher.connect(self.item_callback, signal=signals.item_scraped)
-        if fetch_posts:
-            d = runner.crawl(post_crawler.PostCrawlerSpider, subreddit=subreddit, days=30)
-        else :
-            d = runner.crawl(comment_crawler.CommentCrawlerSpider, subreddit=subreddit, days=30)
-        d.addBoth(lambda _: reactor.stop())
-        reactor.run()
-        reactor.callFromThread(reactor.stop)
+            if fetch_posts:
+                d = process.crawl(post_crawler.PostCrawlerSpider, subreddit=subreddit, days=30)
+            else :
+                d = process.crawl(comment_crawler.CommentCrawlerSpider, subreddit=subreddit.value, days=30)
+            process.start()
+
+            # d.addBoth(lambda _: reactor.stop())
+            # reactor.run()
+            # reactor.callFromThread(reactor.stop)
+        except Exception as e:
+            print("Error_in_crawler_runner: ", e)
         return
 
     async def scrape(self, scrape_config, subreddit):
         # Strip the r/ from the config or use 'all' if no label is provided.
         subreddit_name = normalize_label(subreddit)
-        fetch_posts = bool(random.getrandbits(1))
-        self.crawler_runner(subreddit_name, fetch_posts)
-        
-        # print("data: ",len(self.scraped_data))
+        # fetch_posts = bool(random.getrandbits(1))
+        fetch_posts = True   ##Temporarily making scraping only post
+        # self.crawler_runner(subreddit_name, fetch_posts)
 
-        if fetch_posts :
+        p = Process(target=self.crawler_runner, args=[subreddit, fetch_posts])
+        p.start()
+        p.join()
+        
+        print("scraped_data: ",len(self.scraped_data))
+        
+        if fetch_posts and len(self.scraped_data) == 100:
             parsed_contents = [self._best_effort_parse_post(content, subreddit_name) for content in self.scraped_data ]
         else:
             parsed_contents = [self._best_effort_parse_comment(content, subreddit_name) for content in self.scraped_data ]
-
-        print("parsed_contents", len(parsed_contents))
 
         return [RedditScrapyContent.to_data_entity(content) for content in parsed_contents if content is not None]
 

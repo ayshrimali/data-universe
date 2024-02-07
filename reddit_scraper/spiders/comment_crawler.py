@@ -17,7 +17,9 @@ class SortType(Enum):
 
 class CommentCrawlerSpider(scrapy.Spider):
     name = "comment-crawler"
-    url_template = "https://www.reddit.com/svc/shreddit/community-more-posts/{sort_type}/"
+    # url_template = "https://www.reddit.com/svc/shreddit/community-more-posts/{sort_type}/"
+    url_template = "https://www.reddit.com/r/BitcoinBeginners/{sort_type}/"
+
     comment_headers = {
         'authority': 'www.reddit.com',
         'accept': 'text/vnd.reddit.partial+html, text/html;q=0.9',
@@ -50,7 +52,7 @@ class CommentCrawlerSpider(scrapy.Spider):
             'feedLength': PAGE_SIZE,
             # 'after': utils.encoded_base64_string("t3_19fa7bp"),
         }
-        url = self.url_template.format(sort_type=SortType.NEW.value)
+        url = self.url_template.format(subreddit= self.subreddit, sort_type=SortType.NEW.value)
         url = utils.join_url_params(url, params)
 
         yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})
@@ -64,7 +66,7 @@ class CommentCrawlerSpider(scrapy.Spider):
                 time_stamp = parser.parse(comment.xpath('.//faceplate-timeago')[0].attrib.get('ts'))
             except:
                 pass
-            yield {
+            comment_data = {
                 "id": "",
                 "url": "https://www.reddit.com" + comment.attrib.get("permalink"),
                 "text": utils.clean_text(comment.xpath('.//div[contains(@id, "post-rtjson-content")]//text()').getall()),
@@ -77,6 +79,7 @@ class CommentCrawlerSpider(scrapy.Spider):
                 "score": comment.attrib.get("score"),
                 "type": "comment",
             }
+            yield comment_data
 
     def parse(self, response):
         posts_nodes = response.xpath('//shreddit-post')

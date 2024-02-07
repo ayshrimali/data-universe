@@ -19,7 +19,8 @@ class SortType(Enum):
 # https://www.reddit.com/svc/shreddit/community-more-posts/new/?t=DAY&name=bittensor&feedLength=50&after=dDNfMTlmYTdicA%3D%3D&rdt=51988
 class PostCrawlerSpider(scrapy.Spider):
     name = "post-crawler"
-    url_template = "https://www.reddit.com/svc/shreddit/community-more-posts/{sort_type}/"
+    # url_template = "https://www.reddit.com/svc/shreddit/community-more-posts/{sort_type}/"
+    url_template = "https://www.reddit.com/r/BitcoinBeginners/{sort_type}/"
 
     custom_settings = {
         'ITEM_PIPELINES': {'reddit_scraper.pipelines.RedditPostPipeline': 400}
@@ -31,20 +32,22 @@ class PostCrawlerSpider(scrapy.Spider):
         self.days = int(days)
 
     def start_requests(self) -> Iterable[Request]:
-        print("subreddit__in_spider", self.subreddit)
-        params = {
-            't': 'DAY',
-            'name': self.subreddit,
-            'feedLength': PAGE_SIZE,
-            'after': utils.encoded_base64_string("t3_19fa7bp"),
-        }
-        url = self.url_template.format(sort_type=SortType.NEW.value)
-        url = utils.join_url_params(url, params)
+        try:
+            print("subreddit__in_spider", self.subreddit)
+            params = {
+                't': 'DAY',
+                'name': self.subreddit,
+                'feedLength': PAGE_SIZE,
+                # 'after': utils.encoded_base64_string("t3_19fa7bp"),
+            }
+            url = self.url_template.format(subreddit= self.subreddit, sort_type=SortType.NEW.value)
+            url = utils.join_url_params(url, params)
 
-        yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})
+            yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})
+        except Exception as e:
+            print("error_in_start_req: ",)
 
-    def parse(self, response):
-        print("in parse", response)
+    def parse(self, response):      
         posts_nodes = response.xpath('//shreddit-post')
         last_post_id = ""
         target_timestamp = datetime.now(timezone.utc) - timedelta(days=self.days)

@@ -7,57 +7,67 @@ from dateutil import parser
 from scrapy import Request
 
 from reddit_scraper import settings, utils
+from scraping.reddit.utils import get_custom_sort_input, get_time_input
 
-PAGE_SIZE = 50
 
-
-class SortType(Enum):
-    NEW = "new"
-    HOT = "hot"
-
-# https://www.reddit.com/svc/shreddit/community-more-posts/new/?t=DAY&name=BitcoinBeginners&feedLength=50&after=dDNfMTlmYTdicA%3D%3D
-# https://www.reddit.com/svc/shreddit/community-more-posts/new/?t=DAY&name=bittensor&feedLength=50&after=dDNfMTlmYTdicA%3D%3D&rdt=51988
 class PostCrawlerSpider(scrapy.Spider):
     name = "post-crawler"
     # url_template = "https://www.reddit.com/svc/shreddit/community-more-posts/{sort_type}/"
-    url_template = "https://www.reddit.com/r/BitcoinBeginners/{sort_type}/"
+    url_template = "https://www.reddit.com/{subreddit}/{sort_type}/"
 
     custom_settings = {
-        'ITEM_PIPELINES': {'reddit_scraper.pipelines.RedditPostPipeline': 400}
+        "ITEM_PIPELINES": {"reddit_scraper.pipelines.RedditPostPipeline": 400}
     }
 
-    def __init__(self, subreddit="BitcoinBeginners", days=30, *args, **kwargs):
+    def __init__(self, scrape_config={}, subreddit="BitcoinBeginners", *args, **kwargs):
         super(PostCrawlerSpider, self).__init__(*args, **kwargs)
         self.subreddit = subreddit
-        self.days = int(days)
+        self.mined_data_list = []
+        # Get the search terms for the reddit query.
+        self.search_limit = scrape_config.entity_limit
+        self.search_sort = get_custom_sort_input(scrape_config.date_range.end)
+        self.search_time = get_time_input(scrape_config.date_range.end)
 
     def start_requests(self) -> Iterable[Request]:
         try:
-            print("subreddit__in_spider", self.subreddit)
             params = {
-                't': 'DAY',
-                'name': self.subreddit,
-                'feedLength': PAGE_SIZE,
+                "t": self.search_time,
+                "feedLength": self.search_limit,
                 # 'after': utils.encoded_base64_string("t3_19fa7bp"),
             }
-            url = self.url_template.format(subreddit= self.subreddit, sort_type=SortType.NEW.value)
+            url = self.url_template.format(
+                subreddit=self.subreddit.value, sort_type=self.search_sort
+            )
             url = utils.join_url_params(url, params)
 
-            yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})
+            yield Request(
+                url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING}
+            )
         except Exception as e:
-            print("error_in_start_req: ",)
+            print("error_in_start_req: ", e)
 
-    def parse(self, response):      
-        posts_nodes = response.xpath('//shreddit-post')
+    def parse(self, response):
+        posts_nodes = response.xpath("//shreddit-post")
         last_post_id = ""
-        target_timestamp = datetime.now(timezone.utc) - timedelta(days=self.days)
+        default_time = {
+            "month": timedelta(days=30),
+            "week": timedelta(days=7),
+            "day": timedelta(days=1),
+            "year": timedelta(days=365),
+        }
+        target_timestamp = datetime.now(timezone.utc) - default_time[self.search_time]
 
         for post_node in posts_nodes:
             mined_data = {
                 "id": post_node.attrib.get("id"),
-                "url": post_node.attrib.get("content-href") + post_node.attrib.get("id"),
-                "text": utils.clean_text(post_node.xpath('.//div[@data-post-click-location="text-body"]//text()').getall()),
-                "likes": post_node.attrib.get(""),
+                "url": post_node.attrib.get("content-href")
+                + post_node.attrib.get("id"),
+                "text": utils.clean_text(
+                    post_node.xpath(
+                        './/div[@data-post-click-location="text-body"]//text()'
+                    ).getall()
+                ),
+                "likes": response.xpath("//faceplate-number[1]/@number").get(),
                 "datatype": post_node.attrib.get("post-type"),
                 "user_id": post_node.attrib.get("author-id"),
                 "username": post_node.attrib.get("author"),
@@ -65,28 +75,36 @@ class PostCrawlerSpider(scrapy.Spider):
                 "num_comments": post_node.attrib.get("comment-count"),
                 "title": post_node.attrib.get("post-title"),
                 "type": "post",
+                "subreddit-prefixed-name": post_node.attrib.get(
+                    "subreddit-prefixed-name"
+                ),
             }
 
             # Check if the post's timestamp is within the desired date range
-            if mined_data['timestamp'] >= target_timestamp:
+            if mined_data["timestamp"] >= target_timestamp:
+                self.mined_data_list.append(mined_data)
+                last_post_id = mined_data["id"]
                 yield mined_data
-                last_post_id = mined_data['id']
-            else:
-                # Stop parsing further if a post is older than the target timestamp
-                break
 
         # Only continue pagination if the last post is within the desired date range
-        if last_post_id and mined_data['timestamp'] >= target_timestamp:
+        if (
+            last_post_id
+            and mined_data["timestamp"] >= target_timestamp
+            and len(self.mined_data_list) < 100
+        ):
             params = {
-                't': 'WEEK',
-                'name': self.subreddit,
-                'feedLength': PAGE_SIZE,
-                'after': utils.encoded_base64_string(last_post_id),
+                "t": self.search_time,
+                "feedLength": self.search_limit,
+                "after": utils.encoded_base64_string(last_post_id),
             }
 
-            url = self.url_template.format(sort_type=SortType.NEW.value)
+            url = self.url_template.format(
+                subreddit=self.subreddit.value, sort_type=self.search_sort
+            )
             url = utils.join_url_params(url, params)
-            yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})
+            yield Request(
+                url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING}
+            )
 
 
 # scrapy crawl post-crawler -a subreddit=Bitcoin -a days=30

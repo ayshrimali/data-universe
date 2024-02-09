@@ -75,7 +75,7 @@ class RedditScrapyScraper(Scraper):
                 process.crawl(
                     comment_crawler.CommentCrawlerSpider,
                     scrape_config=scrape_config,
-                    subreddit=subreddit.value,
+                    subreddit=subreddit,
                 )
             process.start()
 
@@ -95,7 +95,7 @@ class RedditScrapyScraper(Scraper):
         # Strip the r/ from the config or use 'all' if no label is provided.
         subreddit_name = normalize_label(subreddit)
         # fetch_posts = bool(random.getrandbits(1))
-        fetch_posts = True  ##Temporary scraping only post
+        fetch_posts = False  ##Temporary scraping only comment
         manager = Manager()
         return_dict = manager.dict()
         data = []
@@ -123,10 +123,15 @@ class RedditScrapyScraper(Scraper):
                 for content in parsed_contents
                 if content is not None
             ]
-        else:
+        elif not fetch_posts and not p.is_alive():
             parsed_contents = [
                 self._best_effort_parse_comment(content, subreddit_name)
-                for content in self.scraped_data
+                for content in return_dict["scraped_data"]
+            ]
+            return [
+                RedditScrapyContent.to_data_entity(content)
+                for content in parsed_contents
+                if content is not None
             ]
 
     def _best_effort_parse_comment(self, comment, subreddit) -> RedditScrapyContent:

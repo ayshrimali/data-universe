@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Iterable
 
@@ -6,20 +7,12 @@ from dateutil import parser
 from scrapy import Request
 
 from reddit_scraper import settings, utils
-
-PAGE_SIZE = 100
-
-
-class SortType(Enum):
-    NEW = "new"
-    HOT = "hot"
+from scraping.reddit.utils import get_custom_sort_input, get_time_input
 
 
 class CommentCrawlerSpider(scrapy.Spider):
     name = "comment-crawler"
-    # url_template = "https://www.reddit.com/svc/shreddit/community-more-posts/{sort_type}/"
-    url_template = "https://www.reddit.com/r/BitcoinBeginners/{sort_type}/"
-
+    url_template = "https://www.reddit.com/svc/shreddit/community-more-posts/{sort_type}/"
     comment_headers = {
         'authority': 'www.reddit.com',
         'accept': 'text/vnd.reddit.partial+html, text/html;q=0.9',
@@ -40,19 +33,24 @@ class CommentCrawlerSpider(scrapy.Spider):
         'ITEM_PIPELINES': {'reddit_scraper.pipelines.RedditPostPipeline': 400}
     }
 
-    def __init__(self, subreddit="BitcoinBeginners", days=30, *args, **kwargs):
-        super(CommentCrawlerSpider, self).__init__()
-        self.subreddit = subreddit
-        self.days = int(days)
+    def __init__(self,scrape_config={}, subreddit="BitcoinBeginners", days=30, *args, **kwargs):
+        super(CommentCrawlerSpider, self).__init__(*args, **kwargs)
+        self.subreddit = subreddit.value.removeprefix("r/")
+        self.mined_data_list = []
+
+        # Get the search terms for the reddit query.
+        self.search_limit = scrape_config.entity_limit
+        self.search_sort = get_custom_sort_input(scrape_config.date_range.end)
+        self.search_time = get_time_input(scrape_config.date_range.end)
 
     def start_requests(self) -> Iterable[Request]:
         params = {
-            't': 'DAY',
+            't': self.search_time,
             'name': self.subreddit,
-            'feedLength': PAGE_SIZE,
-            # 'after': utils.encoded_base64_string("t3_19fa7bp"),
+            'feedLength': self.search_limit,
+            'after': utils.encoded_base64_string("t3_19fa7bp"),
         }
-        url = self.url_template.format(subreddit= self.subreddit, sort_type=SortType.NEW.value)
+        url = self.url_template.format(sort_type=self.search_sort)
         url = utils.join_url_params(url, params)
 
         yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})
@@ -69,8 +67,12 @@ class CommentCrawlerSpider(scrapy.Spider):
             comment_data = {
                 "id": "",
                 "url": "https://www.reddit.com" + comment.attrib.get("permalink"),
-                "text": utils.clean_text(comment.xpath('.//div[contains(@id, "post-rtjson-content")]//text()').getall()),
-                "likes": response.xpath('//faceplate-number[1]/@number').get(),
+                "text": utils.clean_text(
+                    comment.xpath(
+                        './/div[contains(@id, "post-rtjson-content")]//text()'
+                    ).getall()
+                ),
+                "likes": response.xpath("//faceplate-number[1]/@number").get(),
                 "datatype": comment.attrib.get("post-type"),
                 "user_id": comment.attrib.get("author-id"),
                 "username": comment.attrib.get("author"),
@@ -84,13 +86,24 @@ class CommentCrawlerSpider(scrapy.Spider):
     def parse(self, response):
         posts_nodes = response.xpath('//shreddit-post')
         last_post_id = ""
+        default_time = {
+            "month": timedelta(days=30),
+            "week": timedelta(days=7),
+            "day": timedelta(days=1),
+            "year": timedelta(days=365),
+        }
+        target_timestamp = datetime.now(timezone.utc) - default_time[self.search_time]
 
         for post_node in posts_nodes:
             mined_data = {
                 "id": post_node.attrib.get("id"),
                 "url": post_node.attrib.get("content-href") + post_node.attrib.get("id"),
-                "text": utils.clean_text(post_node.xpath('.//div[@data-post-click-location="text-body"]//text()').getall()),
-                "likes": response.xpath('//faceplate-number[1]/@number').get(),
+                "text": utils.clean_text(
+                    post_node.xpath(
+                        './/div[@data-post-click-location="text-body"]//text()'
+                    ).getall()
+                ),
+                "likes": response.xpath("//faceplate-number[1]/@number").get(),
                 "datatype": post_node.attrib.get("post-type"),
                 "user_id": post_node.attrib.get("author-id"),
                 "username": post_node.attrib.get("author"),
@@ -98,34 +111,44 @@ class CommentCrawlerSpider(scrapy.Spider):
                 "num_comments": post_node.attrib.get("comment-count"),
                 "title": post_node.attrib.get("post-title"),
                 "type": "post",
+                "subreddit-prefixed-name": post_node.attrib.get(
+                    "subreddit-prefixed-name"
+                ),
             }
 
-            # yield mined_data
-            last_post_id = mined_data['id']
-            comment_url = f'https://www.reddit.com/svc/shreddit/more-comments/{self.subreddit}/{mined_data["id"]}'
+            if mined_data["timestamp"] >= target_timestamp:
+                # yield mined_data
+                self.mined_data_list.append(mined_data)
+                last_post_id = mined_data['id']
+                comment_url = f'https://www.reddit.com/svc/shreddit/more-comments/{self.subreddit}/{mined_data["id"]}'
 
-            # now follow the comments
+                # now follow the comments
+                params = {
+                    "sort": "TOP",
+                    "top-level": "1",
+                }
+                comment_url = utils.join_url_params(comment_url, params)
+
+                self.comment_headers.update({"referer": mined_data["url"]})
+                yield Request(url=comment_url,
+                            method="POST",
+                            headers=self.comment_headers,
+                            callback=self.parse_comment,
+                            meta={"proxy": settings.PROXY_STRING})
+
+        # Only continue pagination if the last post is within the desired date range
+        if (
+            last_post_id
+            and mined_data["timestamp"] >= target_timestamp
+            and len(self.mined_data_list) < 100
+        ):
             params = {
-                "sort": "TOP",
-                "top-level": "1",
+                't': self.search_time,
+                'name': self.subreddit,
+                'feedLength': self.search_limit,
+                'after': utils.encoded_base64_string(last_post_id),
             }
-            comment_url = utils.join_url_params(comment_url, params)
 
-            self.comment_headers.update({"referer": mined_data["url"]})
-            yield Request(url=comment_url,
-                          method="POST",
-                          headers=self.comment_headers,
-                          callback=self.parse_comment,
-                          meta={"proxy": settings.PROXY_STRING})
-            # return
-
-        params = {
-            't': 'DAY',
-            'name': self.subreddit,
-            'feedLength': PAGE_SIZE,
-            'after': utils.encoded_base64_string(last_post_id),
-        }
-
-        url = self.url_template.format(sort_type=SortType.NEW.value)
-        url = utils.join_url_params(url, params)
-        yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})
+            url = self.url_template.format(sort_type=self.search_sort)
+            url = utils.join_url_params(url, params)
+            yield Request(url=url, callback=self.parse, meta={"proxy": settings.PROXY_STRING})

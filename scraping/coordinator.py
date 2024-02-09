@@ -169,7 +169,7 @@ class ScraperCoordinator:
 
         self.is_running = True
         self.run()
-        # self.thread = threading.Thread(target=self.run, daemon=True).start()
+        self.thread = threading.Thread(target=self.run, daemon=True).start()
 
     def run(self):
         """Blocking call to run the Coordinator, indefinitely."""

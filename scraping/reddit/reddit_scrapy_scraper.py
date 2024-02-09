@@ -1,26 +1,15 @@
-import asyncio
 import random
-import time
-import traceback
 import datetime as dt
-from common.data import DataLabel
 from scraping.reddit.model import RedditScrapyContent
-from scraping.scraper import ScrapeConfig, Scraper
+from scraping.scraper import Scraper
 import bittensor as bt
-from scraping.reddit.utils import normalize_label, normalize_permalink
+from scraping.reddit.utils import normalize_label
 from scrapy.crawler import CrawlerProcess
-from scrapy.crawler import CrawlerRunner
 from scrapy.signalmanager import dispatcher
-from twisted.internet import reactor
-from scrapy.utils.log import configure_logging
 from scrapy.utils.project import get_project_settings
 from reddit_scraper.spiders import comment_crawler, post_crawler
-from scrapy import cmdline
 from scrapy import signals
-from dotenv import load_dotenv
 from multiprocessing import Process, Manager
-
-load_dotenv()
 
 
 class RedditScrapyScraper(Scraper):
@@ -36,35 +25,11 @@ class RedditScrapyScraper(Scraper):
         self.scraped_data.append(item)
         print("data_stored_in_scraped_data: ", len(self.scraped_data))
 
-    # def spider_ended(self, reason):
-    #     print("Spider closed: ",post_crawler.PostCrawlerSpider.name, reason)
-
-    # def run_spider(self, subreddit):
-    #     self.scraped_data = []
-
-    #     setting = get_project_settings()
-    #     process = CrawlerProcess(setting)
-
-    #     # Connect the item_callback function to the spider_closed signal
-    #     process.crawl(post_crawler.PostCrawlerSpider, subreddit=subreddit, days=30)
-    #     crawler = process.crawlers.pop()
-    #     crawler.signals.connect(self.item_callback, signal=signals.item_scraped)
-    #     crawler.signals.connect(self.spider_ended, signal=signals.spider_closed)
-    #     process.crawlers.add(crawler)
-    #     process.start(stop_after_crawl=False)
-    #     process.stop()
-
-    #     return process
-
     def crawler_runner(self, scrape_config, subreddit, fetch_posts, return_dict):
         try:
             self.scraped_data = []
-            # configure_logging()
-            # runner = CrawlerRunner()
             process = CrawlerProcess(get_project_settings())
-
             dispatcher.connect(self.item_callback, signal=signals.item_scraped)
-
             if fetch_posts:
                 process.crawl(
                     post_crawler.PostCrawlerSpider,
@@ -78,24 +43,17 @@ class RedditScrapyScraper(Scraper):
                     subreddit=subreddit,
                 )
             process.start()
-
-            # d.addBoth(lambda _: reactor.stop())
-            # reactor.run()
-            # reactor.callFromThread(reactor.stop)
         except Exception as e:
             print("Error_in_crawler_runner: ", e)
+
         print("data_len_in_crawler", len(self.scraped_data))
 
         return_dict["scraped_data"] = self.scraped_data
 
-    def run(self, subreddit, fetch_posts, return_dict):
-        asyncio.run(self.crawler_runner(subreddit, fetch_posts, return_dict))
-
     async def scrape(self, scrape_config, subreddit):
         # Strip the r/ from the config or use 'all' if no label is provided.
         subreddit_name = normalize_label(subreddit)
-        # fetch_posts = bool(random.getrandbits(1))
-        fetch_posts = False  ##Temporary scraping only comment
+        fetch_posts = bool(random.getrandbits(1))
         manager = Manager()
         return_dict = manager.dict()
         data = []

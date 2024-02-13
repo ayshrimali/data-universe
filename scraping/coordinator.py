@@ -65,7 +65,7 @@ class CoordinatorConfig(StrictBaseModel):
 
 
 def _choose_scrape_configs(
-    scraper_id: ScraperId, config: CoordinatorConfig, now: dt.datetime, subreddit_name
+    scraper_id: ScraperId, config: CoordinatorConfig, now: dt.datetime, subreddit_name, netuid
 ) -> List[ScrapeConfig]:
     """For the given scraper, returns a list of scrapes (defined by ScrapeConfig) to be run."""
     assert (
@@ -101,7 +101,8 @@ def _choose_scrape_configs(
                 entity_limit=label_config.max_data_entities,
                 date_range=TimeBucket.to_date_range(chosen_bucket),
                 labels=labels_to_scrape,
-                subreddit_name=subreddit_name
+                subreddit_name=subreddit_name,
+                netuid = netuid
             )
         )
 
@@ -145,13 +146,15 @@ class ScraperCoordinator:
         scraper_provider: ScraperProvider,
         miner_storage: MinerStorage,
         config: CoordinatorConfig,
-        subreddit_name
+        subreddit_name,
+        netuid
     ):
         self.provider = scraper_provider
         self.storage = miner_storage
         self.config = config
         self.subreddit_name = subreddit_name
-        print("Data_in_coordinator", self.provider, self.storage, self.config,self.subreddit_name)
+        self.netuid = netuid
+        print("Data_in_coordinator", self.provider, self.storage, self.config,self.subreddit_name, self.netuid)
 
         self.tracker = ScraperCoordinator.Tracker(self.config, dt.datetime.utcnow())
         self.max_workers = 5
@@ -173,7 +176,11 @@ class ScraperCoordinator:
 
     def run(self):
         """Blocking call to run the Coordinator, indefinitely."""
-        asyncio.run(self._start())
+        try:
+            asyncio.run(self._start())
+        except KeyboardInterrupt:
+            # raise KeyboardInterrupt("KeyboardInterrupt caught. Cancelling the process...from_run")
+            print("KeyboardInterrupt caught. Cancelling the process...in_run")
 
     def stop(self):
         bt.logging.info("Stopping the ScrapingCoordinator.")
@@ -204,14 +211,14 @@ class ScraperCoordinator:
             for scraper_id in scraper_ids_to_scrape_now:
                 scraper = self.provider.get(scraper_id)
 
-                scrape_configs = _choose_scrape_configs(scraper_id, self.config, now, self.subreddit_name)
+                scrape_configs = _choose_scrape_configs(scraper_id, self.config, now, self.subreddit_name, self.netuid)
 
                 for config in scrape_configs:
                     # Use .partial here to make sure the functions arguments are copied/stored
                     # now rather than being lazily evaluated (if a lambda was used).
                     # https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/cell-var-from-loop.html#cell-var-from-loop-w0640
                     bt.logging.trace(f"Adding scrape task for {scraper_id}: {config}.")
-                    self.queue.put_nowait(functools.partial(scraper.scrape, config, self.subreddit_name))
+                    self.queue.put_nowait(functools.partial(scraper.scrape, config, self.subreddit_name, self.netuid))
 
                 self.tracker.on_scrape_scheduled(scraper_id, now)
 
@@ -233,5 +240,8 @@ class ScraperCoordinator:
                 self.storage.store_data_entities(data_entities)
                 self.queue.task_done()
                 # self.stop()
-            except Exception as e:
-                bt.logging.error("Worker " + name + ": " + traceback.format_exc())
+            # except Exception as e:
+            #     bt.logging.error("Worker " + name + ": " + traceback.format_exc())
+            except KeyboardInterrupt:
+                print("canceling process....")
+                raise KeyboardInterrupt

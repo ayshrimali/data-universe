@@ -1,7 +1,9 @@
 import random
 import datetime as dt
+from typing import List
+from common.data import DataEntity
 from scraping.reddit.model import RedditScrapyContent
-from scraping.scraper import Scraper
+from scraping.scraper import ScrapeConfig, Scraper
 import bittensor as bt
 from scraping.reddit.utils import normalize_label
 from scrapy.crawler import CrawlerProcess
@@ -50,7 +52,9 @@ class RedditScrapyScraper(Scraper):
 
         return_dict["scraped_data"] = self.scraped_data
 
-    async def scrape(self, scrape_config, subreddit):
+    async def scrape(self, scrape_config: ScrapeConfig,  subreddit, netuid) -> List[DataEntity]:
+
+        print("netuid: ", netuid)
         # Strip the r/ from the config or use 'all' if no label is provided.
         subreddit_name = normalize_label(subreddit)
         fetch_posts = bool(random.getrandbits(1))
@@ -76,21 +80,29 @@ class RedditScrapyScraper(Scraper):
                 self._best_effort_parse_post(content, subreddit_name)
                 for content in return_dict["scraped_data"]
             ]
-            return [
-                RedditScrapyContent.to_data_entity(content)
-                for content in parsed_contents
-                if content is not None
-            ]
+            if netuid == 13:
+                return [
+                    RedditScrapyContent.to_data_entity(content)
+                    for content in parsed_contents
+                    if content is not None
+                ]
+            if netuid == 3:
+                return return_dict["scraped_data"]
+
         elif not fetch_posts and not p.is_alive():
             parsed_contents = [
                 self._best_effort_parse_comment(content, subreddit_name)
                 for content in return_dict["scraped_data"]
             ]
-            return [
-                RedditScrapyContent.to_data_entity(content)
-                for content in parsed_contents
-                if content is not None
-            ]
+            if netuid == 13:
+                return [
+                    RedditScrapyContent.to_data_entity(content)
+                    for content in parsed_contents
+                    if content is not None
+                ]
+            if netuid == 3:
+                return return_dict["scraped_data"]
+
 
     def _best_effort_parse_comment(self, comment, subreddit) -> RedditScrapyContent:
         """Performs a best effort parsing of a Reddit data into a RedditScrapyContent

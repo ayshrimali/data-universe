@@ -42,7 +42,8 @@ class RedditScrapyContent(BaseModel):
     title: Optional[str] = Field(
         description="Title of the post. Empty for comments", default=None
     )
-
+    
+    # Comment-only fields.
     parent: Optional[str] = Field(
         description="The ID of the parent comment. Only applicable to comments.",
         default=None,

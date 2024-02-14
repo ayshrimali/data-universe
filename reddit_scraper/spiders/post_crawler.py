@@ -66,15 +66,12 @@ class PostCrawlerSpider(scrapy.Spider):
                 ),
                 "likes": response.xpath("//faceplate-number[1]/@number").get(),
                 "datatype": post_node.attrib.get("post-type"),
-                "user_id": post_node.attrib.get("author-id"),
-                "username": post_node.attrib.get("author"),
                 "timestamp": parser.parse(post_node.attrib.get("created-timestamp")),
-                "num_comments": post_node.attrib.get("comment-count"),
+                "username": post_node.attrib.get("author"),
+                "community":  self.subreddit,
                 "title": post_node.attrib.get("post-title"),
-                "type": "post",
-                "subreddit-prefixed-name": post_node.attrib.get(
-                    "subreddit-prefixed-name"
-                ),
+                "num_comments": post_node.attrib.get("comment-count"),
+                "user_id": post_node.attrib.get("author-id"),
             }
 
             # Check if the post's timestamp is within the desired date range

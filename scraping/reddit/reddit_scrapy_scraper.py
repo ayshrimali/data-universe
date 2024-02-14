@@ -76,11 +76,11 @@ class RedditScrapyScraper(Scraper):
         print("scraped_data: ", len(return_dict["scraped_data"]))
 
         if fetch_posts and not p.is_alive():
-            parsed_contents = [
-                self._best_effort_parse_post(content, subreddit_name)
-                for content in return_dict["scraped_data"]
-            ]
             if netuid == 13:
+                parsed_contents = [
+                    self._best_effort_parse_post(content, subreddit_name)
+                    for content in return_dict["scraped_data"]
+                ]
                 return [
                     RedditScrapyContent.to_data_entity(content)
                     for content in parsed_contents
@@ -90,11 +90,11 @@ class RedditScrapyScraper(Scraper):
                 return return_dict["scraped_data"]
 
         elif not fetch_posts and not p.is_alive():
-            parsed_contents = [
-                self._best_effort_parse_comment(content, subreddit_name)
-                for content in return_dict["scraped_data"]
-            ]
             if netuid == 13:
+                parsed_contents = [
+                    self._best_effort_parse_comment(content, subreddit_name)
+                    for content in return_dict["scraped_data"]
+                ]
                 return [
                     RedditScrapyContent.to_data_entity(content)
                     for content in parsed_contents
@@ -118,7 +118,8 @@ class RedditScrapyScraper(Scraper):
                 username=comment["username"],
                 community=subreddit,
                 created_at=comment["timestamp"],
-                type=comment["type"],
+                type="comment",
+                parent=comment["parent"]
             )
             # print("content_in_best_parse_comment: ", content)
 
@@ -139,13 +140,13 @@ class RedditScrapyScraper(Scraper):
                 text=post["text"],
                 likes=post["likes"],
                 datatype=post["datatype"],
-                user_id=post["user_id"] if post["user_id"] else "[deleted]",
+                created_at=post["timestamp"],
                 username=post["username"],
                 community=subreddit,
-                created_at=post["timestamp"],
                 title=post["title"],
-                type=post["type"],
                 num_comments=post["num_comments"],
+                user_id=post["user_id"] if post["user_id"] else "[deleted]",
+                type="post",
             )
             # print("content_in_best_parse_post: ", content)
 

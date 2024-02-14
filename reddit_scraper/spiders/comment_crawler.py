@@ -65,7 +65,7 @@ class CommentCrawlerSpider(scrapy.Spider):
             except:
                 pass
             comment_data = {
-                "id": "",
+                "id": comment.attrib.get("thingid"),
                 "url": "https://www.reddit.com" + comment.attrib.get("permalink"),
                 "text": utils.clean_text(
                     comment.xpath(
@@ -73,13 +73,11 @@ class CommentCrawlerSpider(scrapy.Spider):
                     ).getall()
                 ),
                 "likes": response.xpath("//faceplate-number[1]/@number").get(),
-                "datatype": comment.attrib.get("post-type"),
-                "user_id": comment.attrib.get("author-id"),
-                "username": comment.attrib.get("author"),
+                "datatype": comment.attrib.get("content-type"),
                 "timestamp": time_stamp,
-                "parent": comment.attrib.get("parentid"),
-                "score": comment.attrib.get("score"),
-                "type": "comment",
+                "username": comment.attrib.get("author"),
+                "parent": comment.attrib.get("postid"),
+                "community":  self.subreddit,
             }
             yield comment_data
 

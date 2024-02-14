@@ -48,19 +48,10 @@ class MongodbMinerScrapyStorage(MinerStorage):
             for data_entity in data_entities:
                 # print("In_inserting_data: ", data_entity)
 
-                self.db.DataEntity.insert_one(
-                    {
-                        "id": data_entity["id"],
-                        "url": data_entity["url"],
-                        "text": data_entity["text"],
-                        "likes": data_entity["likes"],
-                        "datatype": data_entity["datatype"],
-                        "user_id": data_entity["user_id"],
-                        "username": data_entity["username"],
-                        "timestamp": data_entity["timestamp"],
-                        "num_comments": data_entity["num_comments"],
-                        "title": data_entity["title"]
-                    }
+                self.db.DataEntity.replace_one(
+                    {"url": data_entity["url"]},
+                    data_entity,
+                    upsert=True,
                 )
 
     def list_data_entities_in_data_entity_bucket(self):

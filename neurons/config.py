@@ -79,7 +79,8 @@ def add_args(neuron_type: NeuronType, parser):
     Adds relevant arguments to the parser for operation.
     """
     # Netuid Arg: The netuid of the subnet to connect to.
-    parser.add_argument("--netuid", type=int, help="Subnet netuid", default=32)
+    env_netuid = os.getenv('NETUID') if os.getenv('NETUID') else 13
+    parser.add_argument("--netuid", type=int, help="Subnet netuid", default=env_netuid)
 
     parser.add_argument(
         "--neuron.epoch_length",

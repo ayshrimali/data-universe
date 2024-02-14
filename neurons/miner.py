@@ -44,7 +44,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from reddit_scraper.spiders import post_crawler
 
-BYPASS_BT = True
+BYPASS_BT = False
 
 
 class Miner(BaseNeuron):
@@ -159,6 +159,7 @@ class Miner(BaseNeuron):
 
     def neuron_type(self) -> NeuronType:
         return NeuronType.MINER
+
     def run(self):
         """
         Initiates and manages the main loop for the miner.
@@ -170,6 +171,7 @@ class Miner(BaseNeuron):
 
             # Serve passes the axon information to the network + netuid we are hosting on.
             # This will auto-update if the axon port of external ip have changed.
+        
             bt.logging.info(
                 f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}."
             )

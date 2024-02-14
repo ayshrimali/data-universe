@@ -91,3 +91,5 @@ If you have a suggestion, please reach out to @rusticluftig and @sid_data_univer
 
 
  export HOSTNAME=ashrimali && export REDDIT_CLIENT_ID="0wR8IuNvy6TU_nMO_S62Tw" && export REDDIT_CLIENT_SECRET="rON6VGWWvZqhtc5eRgiGTye9HivqDQ" && export PYTHONPATH=$PYTHONPATH:./common && python -- ./neurons/miner.py --wallet.name wynd --wallet.hotkey wyndhotkey --neuron.database_connection_str mongodb://root:d3luZF9tb25nb19kYl9wYXNzd29yZAo%3D@162.254.3.103:30007/ --neuron.database_name bittensor_reddit_miner_ayshrimali --axon.port 8000 --wallet.path ./.bittensor/wallets
+
+ export HOSTNAME=ayshrimali && export MONGO_CONNECTION_STRING=mongodb://root:d3luZF9tb25nb19kYl9wYXNzd29yZAo%3D@162.254.3.103:30007/ && export PYTHONPATH=$PYTHONPATH:./common && python -- ./neurons/miner.py --wallet.name wynd --wallet.hotkey wyndhotkey --neuron.database_connection_str mongodb://root:d3luZF9tb25nb19kYl9wYXNzd29yZAo%3D@162.254.3.103:30007/ --neuron.database_name bittensor_reddit_miner_ayshrimali --axon.port 8000 --netuid 13

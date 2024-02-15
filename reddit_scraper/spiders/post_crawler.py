@@ -64,7 +64,6 @@ class PostCrawlerSpider(scrapy.Spider):
                         './/div[@data-post-click-location="text-body"]//text()'
                     ).getall()
                 ),
-                "likes": response.xpath("//faceplate-number[1]/@number").get(),
                 "datatype": post_node.attrib.get("post-type"),
                 "timestamp": parser.parse(post_node.attrib.get("created-timestamp")),
                 "username": post_node.attrib.get("author"),
@@ -72,6 +71,11 @@ class PostCrawlerSpider(scrapy.Spider):
                 "title": post_node.attrib.get("post-title"),
                 "num_comments": post_node.attrib.get("comment-count"),
                 "user_id": post_node.attrib.get("author-id"),
+                "view-context": post_node.attrib.get("view-context"),
+                "feedindex": post_node.attrib.get("feedindex"),
+                "score": post_node.attrib.get("score"),
+                "subreddit-id": post_node.attrib.get("subreddit-id"),
+                "subreddit-prefixed-name": post_node.attrib.get("subreddit-prefixed-name"),
             }
 
             # Check if the post's timestamp is within the desired date range

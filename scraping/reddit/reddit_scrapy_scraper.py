@@ -52,7 +52,9 @@ class RedditScrapyScraper(Scraper):
 
         return_dict["scraped_data"] = self.scraped_data
 
-    async def scrape(self, scrape_config: ScrapeConfig,  subreddit, netuid) -> List[DataEntity]:
+    async def scrape(
+        self, scrape_config: ScrapeConfig, subreddit, netuid
+    ) -> List[DataEntity]:
 
         print("netuid: ", netuid)
         # Strip the r/ from the config or use 'all' if no label is provided.
@@ -71,14 +73,14 @@ class RedditScrapyScraper(Scraper):
         for proc in data:
             proc.join()
 
-        print("is_process_alive", p.is_alive(), return_dict["scraped_data"])
+        print("is_process_alive", p.is_alive())
 
         print("scraped_data: ", len(return_dict["scraped_data"]))
 
         if fetch_posts and not p.is_alive():
             if netuid == 13:
                 parsed_contents = [
-                    self._best_effort_parse_post(content, subreddit_name)
+                    self._best_effort_parse_post(content)
                     for content in return_dict["scraped_data"]
                 ]
                 return [
@@ -87,12 +89,28 @@ class RedditScrapyScraper(Scraper):
                     if content is not None
                 ]
             if netuid == 3:
-                return return_dict["scraped_data"]
+                data_entity = [
+                    {
+                        "id": post_data["id"],
+                        "url": post_data["url"],
+                        "text": post_data["text"],
+                        "likes": post_data["score"],
+                        "dataType": post_data["datatype"],
+                        "timestamp": post_data["timestamp"],
+                        "username": post_data["username"],
+                        "community": post_data["community"],
+                        "title": post_data["title"],
+                        "num_comments": post_data["num_comments"],
+                        "user_id": post_data["user_id"],
+                    }
+                    for post_data in return_dict["scraped_data"]
+                ]
+                return data_entity
 
         elif not fetch_posts and not p.is_alive():
             if netuid == 13:
                 parsed_contents = [
-                    self._best_effort_parse_comment(content, subreddit_name)
+                    self._best_effort_parse_comment(content)
                     for content in return_dict["scraped_data"]
                 ]
                 return [
@@ -101,10 +119,23 @@ class RedditScrapyScraper(Scraper):
                     if content is not None
                 ]
             if netuid == 3:
-                return return_dict["scraped_data"]
+                data_entity = [
+                    {
+                        "id": comment_data["id"],
+                        "url": comment_data["url"],
+                        "text": comment_data["text"],
+                        "likes": comment_data["score"],
+                        "dataType": comment_data["datatype"],
+                        "timestamp": comment_data["timestamp"],
+                        "username": comment_data["username"],
+                        "parent": comment_data["parent"],
+                        "community": comment_data["community"],
+                    }
+                    for comment_data in return_dict["scraped_data"]
+                ]
+                return data_entity
 
-
-    def _best_effort_parse_comment(self, comment, subreddit) -> RedditScrapyContent:
+    def _best_effort_parse_comment(self, comment) -> RedditScrapyContent:
         """Performs a best effort parsing of a Reddit data into a RedditScrapyContent
         Any errors are logged and ignored."""
 
@@ -114,12 +145,12 @@ class RedditScrapyScraper(Scraper):
                 id=comment["id"],
                 url=comment["url"],
                 text=comment["text"],
-                likes=comment["likes"],
+                likes=comment["score"],
                 username=comment["username"],
-                community=subreddit,
+                community=comment["community"],
                 created_at=comment["timestamp"],
                 type="comment",
-                parent=comment["parent"]
+                parent=comment["parent"],
             )
             # print("content_in_best_parse_comment: ", content)
 
@@ -128,7 +159,7 @@ class RedditScrapyScraper(Scraper):
 
         return content
 
-    def _best_effort_parse_post(self, post, subreddit) -> RedditScrapyContent:
+    def _best_effort_parse_post(self, post) -> RedditScrapyContent:
         """Performs a best effort parsing of a Reddit data into a RedditScrapyContent
         Any errors are logged and ignored."""
 
@@ -138,11 +169,11 @@ class RedditScrapyScraper(Scraper):
                 id=post["id"],
                 url=post["url"],
                 text=post["text"],
-                likes=post["likes"],
+                likes=post["score"],
                 datatype=post["datatype"],
                 created_at=post["timestamp"],
                 username=post["username"],
-                community=subreddit,
+                community=post["community"],
                 title=post["title"],
                 num_comments=post["num_comments"],
                 user_id=post["user_id"] if post["user_id"] else "[deleted]",

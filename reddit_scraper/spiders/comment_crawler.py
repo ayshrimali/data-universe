@@ -72,12 +72,15 @@ class CommentCrawlerSpider(scrapy.Spider):
                         './/div[contains(@id, "post-rtjson-content")]//text()'
                     ).getall()
                 ),
-                "likes": response.xpath("//faceplate-number[1]/@number").get(),
                 "datatype": comment.attrib.get("content-type"),
                 "timestamp": time_stamp,
                 "username": comment.attrib.get("author"),
                 "parent": comment.attrib.get("postid"),
                 "community":  self.subreddit,
+                "depth": comment.attrib.get("depth"),
+                "reload-url": comment.attrib.get("reload-url"),
+                "score": comment.attrib.get("score"),
+                "parent-id": comment.attrib.get("parentid"),
             }
             yield comment_data
 

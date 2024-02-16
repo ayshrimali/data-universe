@@ -1,0 +1,66 @@
+# Node App 1 ----------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: py-miner-13
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: py-miner-13
+  template:
+    metadata:
+      labels:
+        app: py-miner-13
+    spec:
+      containers:
+        - name: py-miner-13
+          image: wynd-py-miner:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PYTHONPATH
+              value: $PYTHONPATH:/app
+            - name: NETUID
+              value: "13"
+          resources:
+            requests:
+              cpu: "250m"
+            limits:
+              cpu: "500m"
+          ports:
+            - containerPort: 8000
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: py-miner-13-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: py-miner-13
+  minReplicas: 1
+  maxReplicas: 1
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: py-miner-13-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: py-miner-13
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8001
+
+---

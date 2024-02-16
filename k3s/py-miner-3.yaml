@@ -2,28 +2,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: py-miner
+  name: py-miner-3
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: py-miner
+      app: py-miner-3
   template:
     metadata:
       labels:
-        app: py-miner
+        app: py-miner-3
     spec:
       containers:
-        - name: py-miner
+        - name: py-miner-3
           image: wynd-py-miner:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: PYTHONPATH
               value: $PYTHONPATH:/app
-            - name: REDDIT_CLIENT_ID
-              value: 0wR8IuNvy6TU_nMO_S62Tw
-            - name: REDDIT_CLIENT_SECRET
-              value: rON6VGWWvZqhtc5eRgiGTye9HivqDQ
+            - name: NETUID
+              value: "3"
           resources:
             requests:
               cpu: "250m"
@@ -36,12 +34,12 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: py-miner-hpa
+  name: py-miner-3-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: py-miner
+    name: py-miner-3
   minReplicas: 1
   maxReplicas: 1
   metrics:
@@ -55,11 +53,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: py-miner-service
+  name: py-miner-3-service
 spec:
   type: LoadBalancer
   selector:
-    app: py-miner
+    app: py-miner-3
   ports:
     - protocol: TCP
       port: 8000

@@ -59,7 +59,7 @@ class BaseNeuron(ABC):
         self.wallet = bt.wallet(config=self.config)
         bt.logging.info(f"Wallet: {self.wallet}.")
 
-        if (not BYPASS_BT):
+        if (not BYPASS_BT == 'True'):
             # The subtensor is our connection to the Bittensor blockchain.
             self.subtensor = bt.subtensor(config=self.config)
             bt.logging.info(f"Subtensor: {self.subtensor}.")

@@ -52,13 +52,15 @@ class Miner(BaseNeuron):
 
     def __init__(self, config=None):
         super().__init__(config=config)
-
+        print("BYPASS_BT: ",BYPASS_BT == 'True', type(BYPASS_BT), os.getenv('BYPASS_BT'))
         # The axon handles request processing, allowing validators to send this miner requests.
-        if (not BYPASS_BT):
+        if (not BYPASS_BT == 'True'):
             self.axon = bt.axon(wallet=self.wallet, port=self.config.axon.port)
 
         # Attach determiners which functions are called when servicing a request.
-        if (not BYPASS_BT):
+        if (not BYPASS_BT == 'True'):
+            print("In_if_bypass ",BYPASS_BT == 'True', type(BYPASS_BT), os.getenv('BYPASS_BT'))
+
             bt.logging.info("Attaching forward function to miner axon.")
             self.axon.attach(
                 forward_fn=self.get_index,

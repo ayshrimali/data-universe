@@ -47,7 +47,7 @@ class LabelScrapingConfig(StrictBaseModel):
         description="The maximum number of items to fetch in a single scrape for this label. If None, the scraper will fetch as many items possible.",
     )
 
-    bt.logging.success("max_age_hint_minutes_in_model: ", max_age_hint_minutes, os.getenv('MAX_AGE_LIMIT'))
+    bt.logging.success(f"max_age_hint_minutes_in_model:  {max_age_hint_minutes}, {os.getenv('MAX_AGE_LIMIT')}")
 
     def to_coordinator_label_scrape_config(self) -> coordinator.LabelScrapingConfig:
         """Returns the internal LabelScrapingConfig representation

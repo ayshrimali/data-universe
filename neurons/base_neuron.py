@@ -30,7 +30,7 @@ from neurons.config import NeuronType, check_config, add_args
 from common.utils import ttl_get_block
 from neurons import __spec_version__ as spec_version
 
-BYPASS_BT = os.getenv('BYPASS_BT')
+BYPASS_BT = os.getenv('BYPASS_BT', 'False')
 
 class BaseNeuron(ABC):
     """
@@ -59,7 +59,7 @@ class BaseNeuron(ABC):
         self.wallet = bt.wallet(config=self.config)
         bt.logging.info(f"Wallet: {self.wallet}.")
 
-        if (not BYPASS_BT == 'True'):
+        if (BYPASS_BT == 'False'):
             # The subtensor is our connection to the Bittensor blockchain.
             self.subtensor = bt.subtensor(config=self.config)
             bt.logging.info(f"Subtensor: {self.subtensor}.")

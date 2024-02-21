@@ -100,6 +100,7 @@ class MongodbMinerStorage(MinerStorage):
         }
 
         data_entities = self.db.DataEntity.find(query)
+        bt.logging.success(f"list_data_entities_in_data_entity_bucket: {data_entities} ")
 
         return [
             DataEntity(
@@ -122,6 +123,7 @@ class MongodbMinerStorage(MinerStorage):
             dt.datetime.now()
             - dt.timedelta(constants.DATA_ENTITY_BUCKET_AGE_LIMIT_DAYS)
         ).id
+        bt.logging.success(f"oldest_time_bucket_id: {oldest_time_bucket_id}")
 
         pipeline = [
             {"$match": {"timeBucketId": {"$gte": oldest_time_bucket_id}}},
@@ -131,6 +133,7 @@ class MongodbMinerStorage(MinerStorage):
         ]
 
         result = list(self.db.DataEntity.aggregate(pipeline))
+        bt.logging.success(f"result: {result}")
 
         buckets_by_source_by_label = defaultdict(dict)
 
@@ -145,6 +148,7 @@ class MongodbMinerStorage(MinerStorage):
             bucket.sizes_bytes.append(size)
             bucket.time_bucket_ids.append(entry["_id"]["timeBucketId"])
             buckets_by_source_by_label[DataSource(entry["_id"]["source"])][label] = bucket
+        bt.logging.success(f"buckets_by_source_by_label: ", buckets_by_source_by_label)
 
         return CompressedMinerIndex(
             sources={

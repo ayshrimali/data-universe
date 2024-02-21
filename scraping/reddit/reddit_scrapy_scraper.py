@@ -58,7 +58,6 @@ class RedditScrapyScraper(Scraper):
 
         print("netuid: ", netuid)
         # Strip the r/ from the config or use 'all' if no label is provided.
-        subreddit_name = normalize_label(subreddit)
         fetch_posts = bool(random.getrandbits(1))
         manager = Manager()
         return_dict = manager.dict()
@@ -80,7 +79,7 @@ class RedditScrapyScraper(Scraper):
         if fetch_posts and not p.is_alive():
             if netuid == 13:
                 parsed_contents = [
-                    self._best_effort_parse_post(content)
+                    self._best_effort_parse_post(content, subreddit.value)
                     for content in return_dict["scraped_data"]
                 ]
                 return [
@@ -95,10 +94,10 @@ class RedditScrapyScraper(Scraper):
                         "url": post_data["url"],
                         "text": post_data["text"],
                         "likes": post_data["score"],
-                        "dataType": post_data["datatype"],
+                        "datatype": post_data["datatype"],
                         "timestamp": post_data["timestamp"],
                         "username": post_data["username"],
-                        "community": post_data["community"],
+                        "community": subreddit.value,
                         "title": post_data["title"],
                         "num_comments": post_data["num_comments"],
                         "user_id": post_data["user_id"],
@@ -110,7 +109,7 @@ class RedditScrapyScraper(Scraper):
         elif not fetch_posts and not p.is_alive():
             if netuid == 13:
                 parsed_contents = [
-                    self._best_effort_parse_comment(content)
+                    self._best_effort_parse_comment(content, subreddit.value)
                     for content in return_dict["scraped_data"]
                 ]
                 return [
@@ -125,17 +124,17 @@ class RedditScrapyScraper(Scraper):
                         "url": comment_data["url"],
                         "text": comment_data["text"],
                         "likes": comment_data["score"],
-                        "dataType": comment_data["datatype"],
+                        "datatype": comment_data["datatype"],
                         "timestamp": comment_data["timestamp"],
                         "username": comment_data["username"],
                         "parent": comment_data["parent"],
-                        "community": comment_data["community"],
+                        "community": subreddit.value,
                     }
                     for comment_data in return_dict["scraped_data"]
                 ]
                 return data_entity
 
-    def _best_effort_parse_comment(self, comment) -> RedditScrapyContent:
+    def _best_effort_parse_comment(self, comment, subreddit) -> RedditScrapyContent:
         """Performs a best effort parsing of a Reddit data into a RedditScrapyContent
         Any errors are logged and ignored."""
 
@@ -147,7 +146,7 @@ class RedditScrapyScraper(Scraper):
                 text=comment["text"],
                 likes=comment["score"],
                 username=comment["username"],
-                community=comment["community"],
+                community=subreddit,
                 created_at=comment["timestamp"],
                 type="comment",
                 parent=comment["parent"],
@@ -159,7 +158,7 @@ class RedditScrapyScraper(Scraper):
 
         return content
 
-    def _best_effort_parse_post(self, post) -> RedditScrapyContent:
+    def _best_effort_parse_post(self, post, subreddit) -> RedditScrapyContent:
         """Performs a best effort parsing of a Reddit data into a RedditScrapyContent
         Any errors are logged and ignored."""
 
@@ -173,7 +172,7 @@ class RedditScrapyScraper(Scraper):
                 datatype=post["datatype"],
                 created_at=post["timestamp"],
                 username=post["username"],
-                community=post["community"],
+                community=subreddit,
                 title=post["title"],
                 num_comments=post["num_comments"],
                 user_id=post["user_id"] if post["user_id"] else "[deleted]",

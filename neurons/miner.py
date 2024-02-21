@@ -44,7 +44,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from reddit_scraper.spiders import post_crawler
 
-BYPASS_BT = False
+BYPASS_BT = os.getenv('BYPASS_BT')
 
 
 class Miner(BaseNeuron):

@@ -91,6 +91,31 @@ class DataLabel(StrictBaseModel):
         """Converts the value to lower case to consistent casing throughout the system."""
         return value.lower()
 
+# Subnet3 dataEntity
+class Subnet3DataEntity(StrictBaseModel):
+    """A logical unit of data that has been scraped for subnet3. E.g. a Reddit post"""
+    id: str
+    url: str
+    text: str
+    likes: str
+    datatype: str
+    timestamp: dt.datetime
+    username: str
+    parent: str
+    community: Optional[DataLabel] = Field(
+        default=None,
+    )
+
+    @classmethod
+    def are_non_content_fields_equal(
+        cls, this: "Subnet3DataEntity", other: "Subnet3DataEntity"
+    ) -> bool:
+        """Returns whether this entity matches the non-content fields of another entity."""
+        return (
+            this.url == other.url
+            and this.timestamp == other.timestamp
+            and this.community == other.community
+        )
 
 class DataEntity(StrictBaseModel):
     """A logical unit of data that has been scraped. E.g. a Reddit post"""

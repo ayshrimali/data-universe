@@ -43,6 +43,8 @@ class CommentCrawlerSpider(scrapy.Spider):
         self.search_sort = get_custom_sort_input(scrape_config.date_range.end)
         self.search_time = get_time_input(scrape_config.date_range.end)
 
+        print("init_params: ",scrape_config, self.search_limit, self.search_sort,  self.search_time)
+
     def start_requests(self) -> Iterable[Request]:
         params = {
             't': self.search_time,
@@ -66,21 +68,25 @@ class CommentCrawlerSpider(scrapy.Spider):
                 pass
             comment_data = {
                 "id": comment.attrib.get("thingid"),
-                "url": "https://www.reddit.com" + comment.attrib.get("permalink"),
+                "url": (
+                    ("https://www.reddit.com" + comment.attrib.get("permalink"))
+                    if comment.attrib.get("permalink")
+                    else "Not Found"
+                ),
                 "text": utils.clean_text(
                     comment.xpath(
                         './/div[contains(@id, "post-rtjson-content")]//text()'
                     ).getall()
                 ),
-                "datatype": comment.attrib.get("content-type"),
+                "datatype": comment.attrib.get("content-type", "Not Found"),
                 "timestamp": time_stamp,
-                "username": comment.attrib.get("author"),
-                "parent": comment.attrib.get("postid"),
-                "community":  self.subreddit,
-                "depth": comment.attrib.get("depth"),
-                "reload-url": comment.attrib.get("reload-url"),
-                "score": comment.attrib.get("score"),
-                "parent-id": comment.attrib.get("parentid"),
+                "username": comment.attrib.get("author", "Not Found"),
+                "parent": comment.attrib.get("postid", "Not Found"),
+                "community": self.subreddit,
+                "depth": comment.attrib.get("depth", "Not Found"),
+                "reload-url": comment.attrib.get("reload-url", "Not Found"),
+                "score": comment.attrib.get("score", "Not Found"),
+                "parent-id": comment.attrib.get("parentid", "Not Found"),
             }
             yield comment_data
 
@@ -131,11 +137,15 @@ class CommentCrawlerSpider(scrapy.Spider):
                 comment_url = utils.join_url_params(comment_url, params)
 
                 self.comment_headers.update({"referer": mined_data["url"]})
-                yield Request(url=comment_url,
-                            method="POST",
-                            headers=self.comment_headers,
-                            callback=self.parse_comment,
-                            meta={"proxy": settings.PROXY_STRING})
+
+                if mined_data['num_comments']:
+                    yield Request(
+                        url=comment_url,
+                        method="POST",
+                        headers=self.comment_headers,
+                        callback=self.parse_comment,
+                        meta={"proxy": settings.PROXY_STRING},
+                    )
 
         # Only continue pagination if the last post is within the desired date range
         if (

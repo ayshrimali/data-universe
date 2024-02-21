@@ -44,7 +44,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from reddit_scraper.spiders import post_crawler
 
-BYPASS_BT = False
+BYPASS_BT = os.getenv('BYPASS_BT', 'False')
 
 
 class Miner(BaseNeuron):
@@ -52,13 +52,15 @@ class Miner(BaseNeuron):
 
     def __init__(self, config=None):
         super().__init__(config=config)
-
+        print("BYPASS_BT: ",BYPASS_BT == 'True', type(BYPASS_BT), os.getenv('BYPASS_BT'))
         # The axon handles request processing, allowing validators to send this miner requests.
-        if (not BYPASS_BT):
+        if (BYPASS_BT == 'False'):
             self.axon = bt.axon(wallet=self.wallet, port=self.config.axon.port)
 
         # Attach determiners which functions are called when servicing a request.
-        if (not BYPASS_BT):
+        if (BYPASS_BT == 'False'):
+            print("In_if_bypass ",BYPASS_BT == 'True', type(BYPASS_BT), os.getenv('BYPASS_BT'))
+
             bt.logging.info("Attaching forward function to miner axon.")
             self.axon.attach(
                 forward_fn=self.get_index,

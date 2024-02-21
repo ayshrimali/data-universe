@@ -11,8 +11,9 @@ the scraping_config JSON file.
 """
 
 
+import os
 from typing import List, Optional
-
+import bittensor as bt
 from pydantic import BaseModel, Field, PositiveInt, ValidationError
 from common import constants
 from common.data import DataLabel, StrictBaseModel
@@ -38,13 +39,15 @@ class LabelScrapingConfig(StrictBaseModel):
         
         Note: not all data sources provide date filters, so this property should be thought of as a hint to the scraper, not a rule.
         """,
-        default=60 * 24 * constants.DATA_ENTITY_BUCKET_AGE_LIMIT_DAYS,
+        default=60 * 24 * int(os.getenv('MAX_AGE_LIMIT')) if os.getenv('MAX_AGE_LIMIT') else 60 * 24 * constants.DATA_ENTITY_BUCKET_AGE_LIMIT_DAYS,
     )
 
     max_data_entities: Optional[PositiveInt] = Field(
         default=None,
         description="The maximum number of items to fetch in a single scrape for this label. If None, the scraper will fetch as many items possible.",
     )
+
+    bt.logging.success(f"max_age_hint_minutes_in_model:  {max_age_hint_minutes}, {os.getenv('MAX_AGE_LIMIT')}")
 
     def to_coordinator_label_scrape_config(self) -> coordinator.LabelScrapingConfig:
         """Returns the internal LabelScrapingConfig representation

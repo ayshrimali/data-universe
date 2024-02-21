@@ -93,24 +93,22 @@ class MongodbMinerScrapyStorage(MinerStorage):
         pass
 
     def check_labels(self, miner_id):
-        self.miner_labels_db = self.meta_db["MinerLabels"]
-        miner_labels = list(self.miner_labels_db.find({"miner_id": miner_id}))
+        self.miner_labels_db = self.meta_db['MinerLabels']
+        miner_labels = list(self.miner_labels_db.find({'miner_id': miner_id}))
         if not miner_labels:
             print("In if to find label with id='None")
-            miner_labels = list(self.miner_labels_db.find({"miner_id": None}))
+            miner_labels = list(self.miner_labels_db.find({'miner_id': None}))
             
         return miner_labels
 
     def store_miner_label(self, miner_data):
-        self.miner_labels_db = self.meta_db["MinerLabels"]
-        query = {"miner_label": miner_data["miner_label"]}
-        update_data = {"$set": {"miner_id": miner_data["miner_id"]}}
+        self.miner_labels_db = self.meta_db['MinerLabels']
+        query = {'miner_label': miner_data["miner_label"]}
+        update_data = {'$set': {'miner_id': miner_data["miner_id"]}}
         result = self.miner_labels_db.update_one(query, update_data, upsert=True)
         return result
 
     def remove_miner_id(self, pod_name):
-        self.miner_labels_db = self.meta_db["MinerLabels"]
-        result = self.miner_labels_db.update_one(
-            {"miner_id": pod_name}, {"$set": {"miner_id": None}}
-        )
+        self.miner_labels_db = self.meta_db['MinerLabels']
+        result = self.miner_labels_db.update_one({"miner_id": pod_name}, {"$set": {"miner_id": None}})
         return result

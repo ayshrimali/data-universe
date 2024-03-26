@@ -64,6 +64,9 @@ class PostCrawlerSpider(scrapy.Spider):
                         './/div[@data-post-click-location="text-body"]//text()'
                     ).getall()
                 ),
+                "body": "".join(post_node.xpath(
+                        './/div[@data-post-click-location="text-body"]'
+                    ).getall()),
                 "datatype": post_node.attrib.get("post-type"),
                 "timestamp": parser.parse(post_node.attrib.get("created-timestamp")),
                 "username": post_node.attrib.get("author"),
